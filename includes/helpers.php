@@ -202,26 +202,29 @@ function smart_assistant_get_provider_presets() {
         'MiniMax' => [
             'label'    => 'MiniMax (OpenAI uyumlu)',
             'base_url' => 'https://api.minimax.io/v1',
-            'models'   => [ 'MiniMax-M3', 'MiniMax-M2.5', 'MiniMax-M2.7', 'MiniMax-Text-01' ],
+            'models'   => [ 'MiniMax-M3', 'MiniMax-M2.5', 'MiniMax-Text-01' ],
             'auth'     => 'bearer',
+            'note'     => 'Token Plan için Group ID alanını da doldurun.',
         ],
         'openai' => [
             'label'    => 'OpenAI',
             'base_url' => 'https://api.openai.com/v1',
-            'models'   => [ 'gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo' ],
+            'models'   => [ 'gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini' ],
             'auth'     => 'bearer',
         ],
         'gemini' => [
             'label'    => 'Google Gemini',
             'base_url' => 'https://generativelanguage.googleapis.com',
-            'models'   => [ 'gemini-1.5-pro', 'gemini-1.5-flash', 'gemini-1.0-pro' ],
+            'models'   => [ 'gemini-2.0-flash', 'gemini-2.5-flash-preview-05-20', 'gemini-1.5-pro', 'gemini-1.5-flash' ],
             'auth'     => 'query',
+            'note'     => 'API Key\'i Gemini API Keys sayfasından alın. Base URL değiştirilmemeli.',
         ],
         'anthropic' => [
             'label'    => 'Anthropic Claude',
-            'base_url' => 'https://api.minimax.io/anthropic',
-            'models'   => [ 'claude-3-5-sonnet-latest', 'claude-3-5-haiku-latest', 'claude-3-opus-latest' ],
+            'base_url' => 'https://api.anthropic.com',
+            'models'   => [ 'claude-sonnet-4-6', 'claude-opus-4-8', 'claude-haiku-4-5-20251001' ],
             'auth'     => 'x-api-key',
+            'note'     => 'API Key\'i console.anthropic.com\'dan alın. Base URL değiştirilmemeli.',
         ],
     ];
 }
