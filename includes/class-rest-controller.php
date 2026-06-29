@@ -286,22 +286,34 @@ class RestController {
     }
 
     /**
-     * Ön kontroller: nonce (opsiyonel) + rate limit.
-     * Nonce bazen cache/CDN arkasında, anonym cookie yokluğunda vs. başarısız olabiliyor.
-     * Bu yüzden: nonce varsa doğrula, yoksa/başarısızsa atla. Rate limit asıl koruma.
+     * Ön kontroller: nonce + rate limit.
+     *
+     * Nonce varsayılan olarak ZORUNLUDUR; geçersiz/eksik nonce reddedilir. Bu,
+     * maliyetli LLM çağrılarının çapraz-köken script'lerle kötüye kullanılmasını
+     * engeller. Tam-sayfa cache/CDN arkasında nonce eskiyebileceği için, site
+     * sahipleri `smart_assistant_enforce_nonce` filter'ı ile zorunluluğu
+     * kapatabilir (bu durumda rate limit tek koruma olur).
      */
     private function preflight( \WP_REST_Request $request ) {
-        $nonce = $this->extract_nonce( $request );
-        if ( '' !== $nonce ) {
-            $verified = wp_verify_nonce( $nonce, 'smart_assistant_nonce' );
-            if ( false === $verified ) {
-                // Geçersiz nonce — logla ama devam et (rate limit koruyor).
-                smart_assistant_log( 'Geçersiz nonce, yine de devam ediliyor (IP: ' . $this->get_client_ip() . ')', 'warn' );
+        $ip      = $this->get_client_ip();
+        $enforce = (bool) apply_filters( 'smart_assistant_enforce_nonce', true );
+        $nonce   = $this->extract_nonce( $request );
+        $valid   = '' !== $nonce && false !== wp_verify_nonce( $nonce, 'smart_assistant_nonce' );
+
+        if ( ! $valid ) {
+            smart_assistant_log(
+                'Geçersiz/eksik nonce (IP: ' . $ip . ', enforce: ' . ( $enforce ? 'on' : 'off' ) . ')',
+                'warning'
+            );
+            if ( $enforce ) {
+                return new \WP_Error(
+                    'invalid_nonce',
+                    __( 'Oturum doğrulaması başarısız. Lütfen sayfayı yenileyip tekrar deneyin.', 'smart-assistant' ),
+                    [ 'status' => 403 ]
+                );
             }
-            // Geçerliyse (1 veya 2): sorun yok, devam.
         }
 
-        $ip = $this->get_client_ip();
         if ( ! $this->check_rate_limit( $ip ) ) {
             return new \WP_Error(
                 'rate_limited',

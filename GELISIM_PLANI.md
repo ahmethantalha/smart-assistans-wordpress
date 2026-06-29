@@ -186,7 +186,24 @@ maliyet** paneli değer katar (ve bütçe uyarısı tetikler).
 
 ---
 
-## 8. Hızlı Kazanımlar (yarım günlük işler)
+## 8. Uygulama Durumu
+
+**Faz 0 + hızlı kazanımlar tamamlandı (v0.4.2):**
+
+- [x] **2.1** Taslak/özel yazı sızıntısı kapatıldı — `Search::is_post_readable()`
+      yardımcısı; `get_post()` ve tek-post arama dalı artık yalnızca `publish` veya
+      `current_user_can('read_post')` geçen içeriği döndürüyor.
+- [x] **2.2** Nonce zorunlu kılındı — geçersiz/eksik nonce 403 ile reddediliyor.
+      Cache-ağırlıklı siteler için `smart_assistant_enforce_nonce` filter escape-hatch'i.
+- [x] **2.4** Activator varsayılan API URL'si `https://api.minimax.io/v1` olarak düzeltildi.
+- [x] Ölü kod silindi (`has_fulltext`, `is_mysql_compatible_query`).
+- [x] `strip_broken_links` içindeki yinelenen regex tekilleştirildi.
+- [x] Deprecated `get_page_by_title` → `WP_Query` (`title` parametresi).
+
+**Sıradaki:** Faz 1a (2.3 provider auth katmanı, 3.3 abilities option mutasyonu) ve
+Faz 1b (composer + PHPCS/PHPStan + PHPUnit + CI + i18n).
+
+## 9. Hızlı Kazanımlar (yarım günlük işler)
 
 1. Activator varsayılan URL'sini düzelt (2.4).
 2. `get_post()`/`get_post_status()` publish kontrolü (2.1).

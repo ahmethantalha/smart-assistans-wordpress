@@ -378,11 +378,8 @@ class AIClient {
             $text
         );
 
-        // Pattern 3: Yarım <a ...> tagı (href sonrası kesilmiş)
+        // Pattern 3: Yarım/kapanmamış <a ...> tagı (href sonrası kesilmiş)
         // Örn: <a href="https://site.com/foo" (kapanmamış)
-        $text = preg_replace( '/<a\s+[^>]*$/imu', '', $text );
-
-        // Pattern 4: Bozuk kapanmamış <a ...> tagları tamamen
         $text = preg_replace( '/<a\s+[^>]*$/imu', '', $text );
 
         return trim( $text );
