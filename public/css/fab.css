@@ -1,0 +1,84 @@
+/* =====================================================
+   Smart Assistant FAB — single post'taki "Özetle" butonu
+   ===================================================== */
+
+/*
+ * FAB launcher'ın solunda (yan yana, aynı dikey seviye).
+ *   Launcher: right: 24, 56x56 → sol kenarı ~80px
+ *   FAB:      right: 90 (24 + 56 + 10 gap), bottom: 24
+ * Böylece mobil back-to-top gibi diğer sağ-alt elementleriyle de
+ * çakışma riski azalır ve kullanıcı iki butonu net ayırt eder.
+ */
+.sa-fab-container {
+    position: fixed;
+    right: 90px;
+    bottom: 24px;
+    z-index: 99996;
+    pointer-events: none;
+}
+
+.sa-fab-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: flex-end;
+    pointer-events: auto;
+}
+
+.sa-fab {
+    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    color: #fff;
+    border: none;
+    border-radius: 28px;
+    padding: 12px 18px 12px 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.sa-fab:hover {
+    transform: scale(1.05) translateY(-2px);
+    box-shadow: 0 12px 28px rgba(124, 58, 237, 0.5);
+}
+
+.sa-fab:focus-visible {
+    outline: 3px solid #fbcfe8;
+    outline-offset: 2px;
+}
+
+.sa-fab-icon {
+    font-size: 16px;
+}
+
+.sa-fab-label {
+    letter-spacing: 0.01em;
+}
+
+/* Chat açıkken FAB'ı gizle — gönder butonu ile çakışmasın. */
+.sa-root.sa-mode-fab .sa-fab-container,
+.sa-root.sa-mode-column .sa-fab-container {
+    display: none !important;
+}
+
+@media (max-width: 640px) {
+    .sa-fab-container {
+        right: 88px;
+        bottom: 24px;
+    }
+    .sa-fab-label {
+        display: none;
+    }
+    .sa-fab {
+        padding: 12px;
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        justify-content: center;
+    }
+}

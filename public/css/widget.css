@@ -1,0 +1,708 @@
+/* =====================================================
+   Smart Assistant Widget — sağ alt köşe + sütun layout
+   ===================================================== */
+
+/* === Kök ve container'lar === */
+.sa-root {
+    position: fixed;
+    inset: auto 0 0 auto;
+    z-index: 99998;
+    pointer-events: none;
+}
+
+.sa-root * {
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Chat açıkken launcher'ı gizle — gönder butonuyla çakışmasın. */
+.sa-root.sa-mode-fab .sa-launcher,
+.sa-root.sa-mode-column .sa-launcher {
+    display: none;
+}
+
+/* === Launcher (sağ alt balon) === */
+.sa-launcher {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+    pointer-events: auto;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sa-launcher:hover {
+    transform: scale(1.06);
+    box-shadow: 0 10px 28px rgba(79, 70, 229, 0.55);
+}
+
+.sa-launcher:focus-visible {
+    outline: 3px solid #c7d2fe;
+    outline-offset: 2px;
+}
+
+/* === Panel (FAB modu — sağ alt küçük pencere) === */
+.sa-panel {
+    position: fixed;
+    right: 24px;
+    bottom: 96px;
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    height: 560px;
+    max-height: calc(100vh - 130px);
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    pointer-events: auto;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    animation: sa-fade-in 0.2s ease;
+}
+
+@keyframes sa-fade-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.sa-panel-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.sa-panel-title {
+    font-size: 15px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sa-panel-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.sa-icon-btn {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.sa-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.32);
+}
+
+.sa-panel-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* === Mesaj balonları === */
+.sa-msg {
+    max-width: 86%;
+    padding: 10px 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    position: relative;
+}
+
+.sa-msg-user {
+    align-self: flex-end;
+    background: #4f46e5;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.sa-msg-assistant {
+    align-self: flex-start;
+    background: #fff;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-bottom-left-radius: 4px;
+}
+
+.sa-msg-assistant a {
+    color: #4f46e5;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(79, 70, 229, 0.3);
+}
+.sa-msg-assistant a:hover {
+    border-bottom-color: #4f46e5;
+}
+
+.sa-loading {
+    opacity: 0.7;
+    animation: sa-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes sa-pulse {
+    0%, 100% { opacity: 0.5; }
+    50%      { opacity: 1; }
+}
+
+/* === Sources === */
+.sa-sources {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.sa-sources-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.sa-source {
+    font-size: 12.5px;
+    color: #4f46e5;
+    text-decoration: none;
+    border-bottom: 1px dotted #c7d2fe;
+}
+.sa-source:hover {
+    border-bottom-style: solid;
+}
+
+/* === Footer / Input === */
+.sa-panel-footer {
+    border-top: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sa-panel-clear {
+    align-self: flex-end;
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+.sa-panel-clear:hover {
+    color: #ef4444;
+    background: #fef2f2;
+}
+
+.sa-panel-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+.sa-panel-input,
+.sa-column-input {
+    flex: 1;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: none;
+    max-height: 100px;
+    min-height: 38px;
+    background: #fff;
+    color: #0f172a;
+}
+
+.sa-panel-input:focus,
+.sa-column-input:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.sa-panel-send,
+.sa-column-send {
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 0 16px;
+    height: 38px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.15s;
+}
+
+.sa-panel-send:hover,
+.sa-column-send:hover {
+    background: #4338ca;
+}
+
+/* === Column mode (sağda sabit sütun) === */
+.sa-column {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 400px;
+    max-width: 100vw;
+    background: #fff;
+    border-left: 1px solid #e2e8f0;
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.08);
+    z-index: 99997;
+    display: flex;
+    flex-direction: column;
+    animation: sa-slide-in 0.25s ease;
+}
+
+@keyframes sa-slide-in {
+    from { transform: translateX(100%); }
+    to   { transform: translateX(0); }
+}
+
+.sa-column-header {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+}
+
+.sa-column-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.sa-column-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sa-column-footer {
+    border-top: 1px solid #e2e8f0;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: #fff;
+}
+
+.sa-column-input-row {
+    display: flex;
+    gap: 6px;
+    align-items: flex-end;
+}
+
+/* Site içeriğini column modunda daralt */
+body.sa-column-active {
+    margin-right: 400px;
+    transition: margin-right 0.25s ease;
+}
+
+@media (max-width: 768px) {
+    body.sa-column-active {
+        margin-right: 0;
+    }
+    .sa-column {
+        width: 100vw;
+    }
+    .sa-panel {
+        right: 12px;
+        left: 12px;
+        width: auto;
+    }
+}
+
+/* === Suggestions (özet sonrası önerilen soru baloncukları) === */
+.sa-suggestions {
+    padding: 10px 14px 12px;
+    background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: sa-suggestions-in 0.35s ease;
+}
+
+@keyframes sa-suggestions-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.sa-suggestions-title {
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.sa-suggestion-chip {
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: #1e293b;
+    text-align: left;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    font-family: inherit;
+    min-height: 44px; /* parmak dostu (mobil) */
+    display: block;
+    width: 100%;
+    word-wrap: break-word;
+}
+
+.sa-suggestion-chip:hover {
+    transform: translateY(-1px);
+    border-color: #4f46e5;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+    background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%);
+}
+
+.sa-suggestion-chip:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 480px) {
+    .sa-suggestion-chip {
+        font-size: 14px;
+        padding: 12px 14px;
+    }
+}
+
+/* === Scrollbar === */
+.sa-panel-messages::-webkit-scrollbar,
+.sa-column-messages::-webkit-scrollbar {
+    width: 6px;
+}
+.sa-panel-messages::-webkit-scrollbar-thumb,
+.sa-column-messages::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+.sa-panel-messages::-webkit-scrollbar-thumb:hover,
+.sa-column-messages::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* === Welcome bubble (site açılınca sağ alttaki tanıtım balonu) === */
+.sa-welcome-bubble {
+    position: fixed;
+    right: 24px;
+    bottom: 96px;
+    background: #fff;
+    color: #0f172a;
+    border-radius: 16px;
+    padding: 14px 18px 12px;
+    max-width: 300px;
+    z-index: 99994;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    animation: sa-welcome-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    font-size: 14px;
+    line-height: 1.45;
+    pointer-events: auto;
+}
+
+.sa-welcome-bubble.is-leaving {
+    opacity: 0;
+    transform: translateY(20px) scale(0.92);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+@keyframes sa-welcome-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.92); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.sa-welcome-bubble-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+    line-height: 1;
+}
+.sa-welcome-bubble-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.sa-welcome-bubble-text {
+    margin: 0 24px 10px 0;
+    color: #1e293b;
+}
+
+.sa-welcome-bubble-cta {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: #fff;
+    border: none;
+    padding: 7px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+.sa-welcome-bubble-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+.sa-welcome-bubble-tail {
+    position: absolute;
+    bottom: -7px;
+    right: 24px;
+    width: 14px;
+    height: 14px;
+    background: #fff;
+    transform: rotate(45deg);
+    border-right: 1px solid rgba(15, 23, 42, 0.06);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+/* Chat açıkken welcome bubble gizlensin. */
+.sa-root.sa-mode-fab .sa-welcome-bubble,
+.sa-root.sa-mode-column .sa-welcome-bubble {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .sa-welcome-bubble {
+        right: 12px;
+        left: 12px;
+        bottom: 88px;
+        max-width: none;
+    }
+    .sa-welcome-bubble-tail {
+        right: 32px;
+    }
+}
+
+/* === Markdown içerik stilleri === */
+.sa-msg-assistant {
+    /* Asistan balonu içindeki markdown stilleri */
+}
+
+.sa-msg-assistant p {
+    margin: 0 0 8px;
+    line-height: 1.55;
+}
+.sa-msg-assistant p:last-child {
+    margin-bottom: 0;
+}
+
+.sa-msg-assistant h1,
+.sa-msg-assistant h2,
+.sa-msg-assistant h3,
+.sa-msg-assistant h4,
+.sa-msg-assistant h5,
+.sa-msg-assistant h6 {
+    margin: 12px 0 6px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #1e293b;
+}
+.sa-msg-assistant h1 { font-size: 19px; }
+.sa-msg-assistant h2 { font-size: 17px; }
+.sa-msg-assistant h3 { font-size: 15.5px; }
+.sa-msg-assistant h4 { font-size: 14.5px; }
+.sa-msg-assistant h5,
+.sa-msg-assistant h6 { font-size: 14px; }
+.sa-msg-assistant h2:first-child,
+.sa-msg-assistant h3:first-child,
+.sa-msg-assistant h4:first-child {
+    margin-top: 0;
+}
+
+.sa-msg-assistant strong {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.sa-msg-assistant em {
+    font-style: italic;
+}
+
+.sa-msg-assistant ul,
+.sa-msg-assistant ol {
+    margin: 6px 0 10px;
+    padding-left: 22px;
+}
+.sa-msg-assistant li {
+    margin: 3px 0;
+    line-height: 1.5;
+}
+.sa-msg-assistant li > p {
+    margin: 0;
+}
+
+.sa-msg-assistant code {
+    background: #f1f5f9;
+    color: #be185d;
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px;
+}
+
+.sa-msg-assistant pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 10px 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+}
+.sa-msg-assistant pre code {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+    font-size: inherit;
+}
+
+.sa-msg-assistant blockquote {
+    border-left: 3px solid #cbd5e1;
+    margin: 8px 0;
+    padding: 4px 12px;
+    color: #475569;
+    background: #f8fafc;
+    border-radius: 0 4px 4px 0;
+}
+
+.sa-msg-assistant a {
+    color: #4f46e5;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(79, 70, 229, 0.3);
+    word-break: break-all;
+}
+.sa-msg-assistant a:hover {
+    border-bottom-color: #4f46e5;
+    color: #4338ca;
+}
+
+/* Markdown liste'ler düz <br> ile değil, gerçek listeyle gelsin. */
+.sa-msg-assistant ul li,
+.sa-msg-assistant ol li {
+    word-wrap: break-word;
+}
+
+/* =========================== Mesaj kopyalama butonu =========================== */
+.sa-msg-copy {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+    z-index: 1;
+}
+
+.sa-msg:hover .sa-msg-copy,
+.sa-msg-copy:focus-visible,
+.sa-msg-copy.is-copied {
+    opacity: 1;
+}
+
+.sa-msg-copy:hover {
+    background: #fff;
+    color: #4f46e5;
+    border-color: #c7d2fe;
+}
+
+.sa-msg-copy:active {
+    transform: scale(0.92);
+}
+
+.sa-msg-copy.is-copied {
+    color: #10b981;
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+}
+
+/* Koyu renkli user balonu için: butonu biraz farklı göster */
+.sa-msg-user .sa-msg-copy {
+    background: rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.85);
+}
+.sa-msg-user .sa-msg-copy:hover {
+    background: rgba(255, 255, 255, 0.32);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Mobilde hover yok, dokunma için her zaman görünür */
+@media (max-width: 640px) {
+    .sa-msg-copy { opacity: 0.65; }
+    .sa-msg-copy.is-copied { opacity: 1; }
+}

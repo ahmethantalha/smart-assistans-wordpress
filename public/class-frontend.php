@@ -1,0 +1,88 @@
+<?php
+namespace SmartAssistant;
+
+if ( ! defined( 'ABSPATH' ) ) {
+    exit;
+}
+
+/**
+ * Frontend: widget, FAB ve asset'leri yükler.
+ */
+class Frontend {
+
+    public function register_hooks() {
+        add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+    }
+
+    public function enqueue_assets() {
+        // Sadece frontend'de.
+        if ( is_admin() ) {
+            return;
+        }
+
+        // Chatbot widget: her yerde.
+        wp_enqueue_style(
+            'smart-assistant-widget',
+            SMART_ASSISTANT_URL . 'public/css/widget.css',
+            [],
+            SMART_ASSISTANT_VERSION
+        );
+
+        wp_enqueue_script(
+            'smart-assistant-widget',
+            SMART_ASSISTANT_URL . 'public/js/widget.js',
+            [],
+            SMART_ASSISTANT_VERSION,
+            true
+        );
+
+        // FAB: ayarlarda seçili tüm post type'ların single görünümünde görünsün (post, page, CPT).
+        $is_single_post = smart_assistant_current_supports_fab();
+
+        $identity = smart_assistant_get_identity();
+
+        $localize = [
+            'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1/' ) ),
+            'nonce'    => wp_create_nonce( 'smart_assistant_nonce' ),
+            'isSingle' => (bool) $is_single_post,
+            'postId'   => $is_single_post ? (int) get_queried_object_id() : 0,
+            'postType' => $is_single_post ? (string) get_post_type() : '',
+            'siteUrl'  => esc_url_raw( site_url() ),
+            'identity' => [
+                'name'     => $identity['name'],
+                'greeting' => $identity['greeting'],
+                'signature'=> $identity['show_signature'] ? '— ' . $identity['name'] : '',
+            ],
+            'i18n'     => [
+                'askPlaceholder'   => __( 'Bir şey sor…', 'smart-assistant' ),
+                'send'             => __( 'Gönder', 'smart-assistant' ),
+                'thinking'         => __( 'Düşünüyor…', 'smart-assistant' ),
+                'error'            => __( 'Bir hata oluştu. Tekrar dene.', 'smart-assistant' ),
+                'clearChat'        => __( 'Sohbeti temizle', 'smart-assistant' ),
+                'expand'           => __( 'Genişlet', 'smart-assistant' ),
+                'collapse'         => __( 'Küçült', 'smart-assistant' ),
+                'summarizeTitle'   => __( 'Bu sayfayı özetle', 'smart-assistant' ),
+                'openChat'         => $identity['name'], // Widget header'ında gösterilecek.
+                'closeChat'        => __( 'Kapat', 'smart-assistant' ),
+                'sources'          => __( 'Kaynaklar', 'smart-assistant' ),
+                'welcomeMsg'       => $identity['greeting'],
+                'welcomeBubble'    => $identity['greeting'],
+                'suggestionsTitle' => __( 'Sorabilirsin', 'smart-assistant' ),
+                'welcomeCTA'       => __( '💬 Sohbete başla', 'smart-assistant' ),
+                'minimize'         => __( 'Küçült', 'smart-assistant' ),
+            ],
+        ];
+
+        wp_localize_script( 'smart-assistant-widget', 'SmartAssistant', $localize );
+
+        if ( $is_single_post ) {
+            wp_enqueue_style(
+                'smart-assistant-fab',
+                SMART_ASSISTANT_URL . 'public/css/fab.css',
+                [ 'smart-assistant-widget' ],
+                SMART_ASSISTANT_VERSION
+            );
+            // Not: FAB davranışı widget.js içinde zaten kuruluyor (isSingle true ise buildFab()).
+        }
+    }
+}
