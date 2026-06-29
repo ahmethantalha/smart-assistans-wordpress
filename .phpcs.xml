@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<ruleset name="Smart Assistant">
+    <description>WordPress Coding Standards – Smart Assistant plugin.</description>
+
+    <file>smart-assistant.php</file>
+    <file>uninstall.php</file>
+    <file>includes/</file>
+    <file>admin/</file>
+    <file>public/</file>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/tests/*</exclude-pattern>
+    <exclude-pattern>*/node_modules/*</exclude-pattern>
+
+    <arg name="basepath" value="."/>
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <arg name="extensions" value="php"/>
+
+    <rule ref="WordPress">
+        <!-- PSR-4 autoloader'daki dosya isimleri WP konvansiyonundan farklı olabilir. -->
+        <exclude name="WordPress.Files.FileName"/>
+        <!-- Inline SQL güvenliği: $wpdb->prepare zaten uygulanıyor. -->
+        <exclude name="WordPress.DB.DirectDatabaseQuery.DirectQuery"/>
+        <exclude name="WordPress.DB.DirectDatabaseQuery.NoCaching"/>
+    </rule>
+
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array" value="smart-assistant"/>
+        </properties>
+    </rule>
+
+    <!-- PHP 7.4 uyumluluğunu kontrol et. -->
+    <config name="minimum_supported_wp_version" value="6.0"/>
+    <config name="testVersion" value="7.4-"/>
+</ruleset>
