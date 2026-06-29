@@ -50,6 +50,11 @@ class RestController {
                     'type'     => 'integer',
                     'default'  => 0,
                 ],
+                'tool'    => [
+                    'required' => false,
+                    'type'     => 'string',
+                    'default'  => '',
+                ],
                 'nonce'   => [
                     'required' => true,
                     'type'     => 'string',
@@ -142,10 +147,17 @@ class RestController {
         $message = sanitize_text_field( $request->get_param( 'message' ) );
         $history = $this->normalize_history( $request->get_param( 'history' ) );
         $post_id = absint( $request->get_param( 'post_id' ) );
+        $tool    = sanitize_key( (string) $request->get_param( 'tool' ) );
+        $tools   = smart_assistant_get_tools();
+        if ( '' !== $tool && ! isset( $tools[ $tool ] ) ) {
+            $tool = '';
+        }
 
-        // Bağlam: kaynaklar.
+        // Araç (hesaplayıcı) modu: site içeriğine bakılmaz, RAG araması atlanır.
         $sources = [];
-        if ( 'open_notebook' === $opts['mode'] ) {
+        if ( '' !== $tool ) {
+            // no-op — $sources boş kalır.
+        } elseif ( 'open_notebook' === $opts['mode'] ) {
             $on_resp = \SmartAssistant\Plugin::instance()->open_notebook->ask( $message, $post_id );
             if ( is_wp_error( $on_resp ) ) {
                 // ON hata verirse (örn. Gemini embedding quota bitti) sessizce Mod 1'e düş.
@@ -180,6 +192,7 @@ class RestController {
         $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, [
             'sources' => $sources,
             'mode'    => 'simple',
+            'tool'    => $tool,
         ] );
 
         if ( is_wp_error( $ai_resp ) ) {

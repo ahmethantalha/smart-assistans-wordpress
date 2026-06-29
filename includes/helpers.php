@@ -269,3 +269,43 @@ function smart_assistant_current_supports_fab() {
     $post_type = get_post_type();
     return $post_type && in_array( $post_type, (array) $opts['post_types'], true );
 }
+
+/**
+ * Widget'taki "Testler" panelinde gösterilen interaktif hesaplayıcı tanımları.
+ *
+ * Her aracın system_prompt'u, AI'a soruları sırayla sordurup formülü kendi
+ * hesaplamasını söyler — ek backend hesaplama kodu gerekmez. system_prompt
+ * frontend'e ASLA gönderilmez (bkz. Frontend::get_tools_for_js()); sadece
+ * 'tool' key'i REST isteğinde gidip gelir, AIClient sunucu tarafında prompt'u
+ * eşleştirir.
+ */
+function smart_assistant_get_tools() {
+    $tools = [
+        'tdee' => [
+            'label'         => __( 'Kalori & TDEE', 'smart-assistant' ),
+            'description'   => __( 'Günlük enerji ihtiyacını hesapla', 'smart-assistant' ),
+            'icon'          => '🔥',
+            'welcome_msg'   => __( 'Merhaba! Günlük kalori ihtiyacınızı hesaplamak için birkaç soru soracağım. Başlayalım — cinsiyetiniz nedir? (Erkek / Kadın)', 'smart-assistant' ),
+            'system_prompt' => 'Sen bir TDEE (Günlük Toplam Enerji Harcaması) hesaplayıcısısın. Kullanıcıyla Türkçe konuş, nazik ve motive edici bir ton kullan. Sırayla şu bilgileri sor — HER SEFERİNDE YALNIZCA BİR SORU: cinsiyet (erkek/kadın), yaş, boy (cm), kilo (kg), aktivite seviyesi. Aktivite seviyesini sorarken seçenekleri açıkla: hareketsiz (masa başı iş, neredeyse hiç egzersiz yok), hafif aktif (haftada 1-3 gün hafif egzersiz), orta aktif (haftada 3-5 gün orta egzersiz), çok aktif (haftada 6-7 gün yoğun egzersiz), ekstra aktif (günde 2 antrenman veya ağır fiziksel iş). Tüm bilgileri aldıktan sonra Harris-Benedict formülüyle BMR hesapla: Erkek için BMR = 88.362 + (13.397 × kilo) + (4.799 × boy) - (5.677 × yaş); Kadın için BMR = 447.593 + (9.247 × kilo) + (3.098 × boy) - (4.330 × yaş). TDEE = BMR × aktivite çarpanı (hareketsiz=1.2, hafif aktif=1.375, orta aktif=1.55, çok aktif=1.725, ekstra aktif=1.9). Sonucu net ve güzel formatlı sun: BMR, TDEE ve üç kalori hedefi (kilo verme için TDEE-500, koruma için TDEE, kilo alma için TDEE+500). Ardından kullanıcının ek sorularına yanıt ver. Site içeriğine başvurma, sadece bu hesaplamayı yap.',
+        ],
+        'body_fat' => [
+            'label'         => __( 'Vücut Yağ Oranı', 'smart-assistant' ),
+            'description'   => __( 'US Navy yöntemiyle yağ yüzdesini ölç', 'smart-assistant' ),
+            'icon'          => '⚖️',
+            'welcome_msg'   => __( 'Vücut yağ oranınızı US Navy yöntemiyle hesaplayacağım. Cinsiyetiniz nedir? (Erkek / Kadın)', 'smart-assistant' ),
+            'system_prompt' => 'Sen bir vücut yağ oranı hesaplayıcısısın. Kullanıcıyla Türkçe konuş. US Navy yöntemini kullanacaksın. Sırayla sor — HER SEFERİNDE YALNIZCA BİR SORU: cinsiyet, boy (cm), bel çevresi (göbeğin en ince noktasından ölçülen, cm), boyun çevresi (cm). Kullanıcı kadınsa ek olarak kalça çevresini (cm) de sor. Formüller: Erkek için %Yağ = 86.010 × log10(bel − boyun) − 70.041 × log10(boy) + 36.76; Kadın için %Yağ = 163.205 × log10(bel + kalça − boyun) − 97.684 × log10(boy) − 78.387 (tüm ölçüler cm). Sonucu ve kategorisini belirt: Esansiyel yağ (Erkek 2-5%, Kadın 10-13%), Atletik (Erkek 6-13%, Kadın 14-20%), Fitness (Erkek 14-17%, Kadın 21-24%), Kabul edilebilir (Erkek 18-24%, Kadın 25-31%), Obez (Erkek ≥25%, Kadın ≥32%). Sağlıklı aralığa ulaşmak için kısa, pratik öneriler sun. Site içeriğine başvurma, sadece bu hesaplamayı yap.',
+        ],
+        'bmi' => [
+            'label'         => __( 'BMI Hesaplayıcı', 'smart-assistant' ),
+            'description'   => __( 'Beden kitle indeksini öğren', 'smart-assistant' ),
+            'icon'          => '📊',
+            'welcome_msg'   => __( 'BMI (Beden Kitle İndeksi) hesaplayacağım. Önce boyunuzu cm cinsinden yazar mısınız?', 'smart-assistant' ),
+            'system_prompt' => 'Sen bir BMI (Beden Kitle İndeksi) hesaplayıcısısın. Kullanıcıyla Türkçe konuş. Sırayla sor — HER SEFERİNDE YALNIZCA BİR SORU: boy (cm), kilo (kg). BMI = kilo ÷ (boy/100)². Sonucu ve kategorisini belirt: Zayıf (<18.5), Normal (18.5-24.9), Fazla kilolu (25-29.9), Obez I (30-34.9), Obez II (≥35). BMI\'nin genel bir gösterge olduğunu, kas kütlesi yoğun kişilerde yanıltıcı olabileceğini kısaca belirt. Ardından kullanıcının ek sorularına yanıt ver. Site içeriğine başvurma, sadece bu hesaplamayı yap.',
+        ],
+    ];
+
+    /**
+     * Site sahiplerinin kendi araçlarını ekleyebilmesi / mevcutları değiştirebilmesi için.
+     */
+    return apply_filters( 'smart_assistant_tools', $tools );
+}

@@ -127,6 +127,14 @@
     gap: 10px;
 }
 
+/* [hidden] attribute, display:flex/grid gibi author kurallarıyla aynı özgüllükte
+   olduğundan kaybedebilir — burada açıkça kazandırıyoruz. */
+.sa-panel-messages[hidden],
+.sa-tools-panel[hidden],
+.sa-suggestions[hidden] {
+    display: none !important;
+}
+
 /* === Mesaj balonları === */
 .sa-msg {
     max-width: 86%;
@@ -413,6 +421,101 @@ body.sa-column-active {
         font-size: 14px;
         padding: 12px 14px;
     }
+}
+
+/* === Testler (hesaplayıcılar) paneli === */
+.sa-tools-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sa-tools-hint {
+    font-size: 12.5px;
+    color: #64748b;
+    margin-bottom: 2px;
+}
+
+.sa-tool-card {
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: left;
+    font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s, transform 0.12s;
+}
+
+.sa-tool-card:hover {
+    border-color: #4f46e5;
+    box-shadow: 0 4px 14px rgba(79, 70, 229, 0.14);
+    transform: translateY(-1px);
+}
+
+.sa-tool-card:active {
+    transform: translateY(0);
+}
+
+.sa-tool-icon {
+    font-size: 26px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 38px;
+    text-align: center;
+}
+
+.sa-tool-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sa-tool-label {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.sa-tool-desc {
+    font-size: 12.5px;
+    color: #64748b;
+    line-height: 1.35;
+}
+
+.sa-tool-arrow {
+    color: #94a3b8;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Header'daki "← Testler" geri dönüş butonu (aktif araç modunda). */
+.sa-tool-back {
+    background: rgba(255, 255, 255, 0.18);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0 10px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 12.5px;
+    font-weight: 600;
+    font-family: inherit;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.sa-tool-back:hover {
+    background: rgba(255, 255, 255, 0.32);
 }
 
 /* === Scrollbar === */

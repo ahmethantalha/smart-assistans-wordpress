@@ -39,9 +39,16 @@ class AIClient {
 
         // System prompt: çağıran taraf eklemediyse otomatik ekle.
         // Summarize handler kendi system message'ını ekliyor; chat handler yalnızca
-        // user/history gönderiyor, bu durumda kimlik şablonunu kullan.
+        // user/history gönderiyor, bu durumda kimlik şablonunu (veya aktif aracın
+        // hesaplayıcı prompt'unu) kullan.
         if ( empty( $messages ) || ! isset( $messages[0]['role'] ) || 'system' !== $messages[0]['role'] ) {
-            $default_system = smart_assistant_build_identity_prompt( $opts['system_prompt'] ?? '' );
+            $tool_key  = $context['tool'] ?? '';
+            $tools     = '' !== $tool_key ? smart_assistant_get_tools() : [];
+            if ( isset( $tools[ $tool_key ] ) ) {
+                $default_system = $tools[ $tool_key ]['system_prompt'];
+            } else {
+                $default_system = smart_assistant_build_identity_prompt( $opts['system_prompt'] ?? '' );
+            }
             if ( ! empty( $context['system_suffix'] ) ) {
                 $default_system .= "\n\n" . $context['system_suffix'];
             }

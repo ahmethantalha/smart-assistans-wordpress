@@ -20,6 +20,8 @@
         contextPostId: 0,    // FAB özetleme için
         history: [],         // AI'a gönderilecek geçmiş (role/content)
         suggestions: [],     // son cevap için 3 önerilen soru (FAB özetleme sonrası)
+        activeTool: null,    // { key, label, icon, description, welcomeMsg } — aktif hesaplayıcı
+        uiView: 'chat',      // 'chat' | 'tools-list'
     };
 
     // ===== DOM helpers =====
@@ -43,6 +45,7 @@
     // ===== Ana container =====
     let root, launcher, fab, panel, panelMessages, panelInput, panelHeader, panelSendBtn;
     let columnContainer, fabContainer;
+    let panelTitleEl, panelActionsEl, panelToolsList;
 
     function init() {
         if ( document.getElementById( 'smart-assistant-root' ) ) {
@@ -128,15 +131,12 @@
 
     // ===== Panel (chatbot penceresi) =====
     function buildPanel() {
-        panelHeader = el( 'div', { className: 'sa-panel-header' },
-            el( 'span', { className: 'sa-panel-title' }, '🤖 ', el( 'strong', {}, SA.i18n.openChat ) ),
-            el( 'div', { className: 'sa-panel-actions' },
-                buildIconBtn( '↗', SA.i18n.expand, () => switchMode( 'column' ), 'sa-btn-expand' ),
-                buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' )
-            )
-        );
+        panelTitleEl   = el( 'span', { className: 'sa-panel-title' } );
+        panelActionsEl = el( 'div', { className: 'sa-panel-actions' } );
+        panelHeader    = el( 'div', { className: 'sa-panel-header' }, panelTitleEl, panelActionsEl );
 
-        panelMessages = el( 'div', { className: 'sa-panel-messages' } );
+        panelMessages  = el( 'div', { className: 'sa-panel-messages' } );
+        panelToolsList = el( 'div', { className: 'sa-tools-panel', hidden: true } );
 
         panelInput = el( 'textarea', {
             className: 'sa-panel-input',
@@ -162,6 +162,7 @@
 
         panel = el( 'div', { className: 'sa-panel sa-fab-mode', hidden: true },
             panelHeader,
+            panelToolsList,
             panelMessages,
             el( 'div', { className: 'sa-panel-footer' },
                 buildClearButton(),
@@ -172,6 +173,107 @@
             )
         );
         root.appendChild( panel );
+
+        updatePanelHeader();
+    }
+
+    // ===== Testler (hesaplayıcılar) paneli =====
+
+    /**
+     * Header'ı duruma göre yeniden çiz: normal sohbet / araç listesi / aktif araç.
+     */
+    function updatePanelHeader() {
+        if ( ! panelTitleEl || ! panelActionsEl ) return;
+        panelTitleEl.innerHTML   = '';
+        panelActionsEl.innerHTML = '';
+
+        const hasTools = Array.isArray( SA.tools ) && SA.tools.length > 0;
+
+        if ( 'tools-list' === state.uiView ) {
+            panelTitleEl.appendChild( document.createTextNode( '🧪 ' ) );
+            panelTitleEl.appendChild( el( 'strong', {}, SA.i18n.tests ) );
+            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+        } else if ( state.activeTool ) {
+            panelTitleEl.appendChild( document.createTextNode( state.activeTool.icon + ' ' ) );
+            panelTitleEl.appendChild( el( 'strong', {}, state.activeTool.label ) );
+            panelActionsEl.appendChild( el( 'button', {
+                className: 'sa-tool-back',
+                type: 'button',
+                onClick: showToolsList,
+            }, '← ' + SA.i18n.tests ) );
+            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+        } else {
+            panelTitleEl.appendChild( document.createTextNode( '🤖 ' ) );
+            panelTitleEl.appendChild( el( 'strong', {}, SA.i18n.openChat ) );
+            if ( hasTools ) {
+                panelActionsEl.appendChild( buildIconBtn( '🧪', SA.i18n.tests, showToolsList, 'sa-btn-tools' ) );
+            }
+            panelActionsEl.appendChild( buildIconBtn( '↗', SA.i18n.expand, () => switchMode( 'column' ), 'sa-btn-expand' ) );
+            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+        }
+    }
+
+    function showToolsList() {
+        state.uiView = 'tools-list';
+        renderToolsList();
+        if ( panelToolsList ) panelToolsList.hidden = false;
+        if ( panelMessages ) panelMessages.hidden = true;
+        const sugg = panel && panel.querySelector( '.sa-suggestions' );
+        if ( sugg ) sugg.hidden = true;
+        updatePanelHeader();
+    }
+
+    function showChatView() {
+        state.uiView = 'chat';
+        if ( panelToolsList ) panelToolsList.hidden = true;
+        if ( panelMessages ) panelMessages.hidden = false;
+        const sugg = panel && panel.querySelector( '.sa-suggestions' );
+        if ( sugg ) sugg.hidden = false;
+        updatePanelHeader();
+    }
+
+    function renderToolsList() {
+        if ( ! panelToolsList ) return;
+        panelToolsList.innerHTML = '';
+
+        panelToolsList.appendChild( el( 'div', { className: 'sa-tools-hint' }, SA.i18n.testsHint || '' ) );
+
+        ( SA.tools || [] ).forEach( ( tool ) => {
+            const card = el(
+                'button',
+                {
+                    className: 'sa-tool-card',
+                    type: 'button',
+                    onClick: () => startTool( tool ),
+                },
+                el( 'span', { className: 'sa-tool-icon', 'aria-hidden': 'true' }, tool.icon ),
+                el( 'span', { className: 'sa-tool-info' },
+                    el( 'span', { className: 'sa-tool-label' }, tool.label ),
+                    el( 'span', { className: 'sa-tool-desc' }, tool.description )
+                ),
+                el( 'span', { className: 'sa-tool-arrow', 'aria-hidden': 'true' }, '›' )
+            );
+            panelToolsList.appendChild( card );
+        } );
+    }
+
+    /**
+     * Bir aracı başlat: sohbeti sıfırla, sistem prompt'u sunucuda tool key
+     * ile eşleştirilecek, kullanıcıya aracın karşılama mesajını göster.
+     */
+    function startTool( tool ) {
+        state.activeTool   = tool;
+        state.messages      = [];
+        state.history       = [];
+        state.suggestions   = [];
+        state.contextPostId = 0;
+
+        showChatView();
+        renderMessages();
+        renderSuggestions();
+        pushMessage( 'assistant', tool.welcomeMsg );
+
+        if ( panelInput ) panelInput.focus();
     }
 
     function buildClearButton() {
@@ -266,6 +368,10 @@
             moveMessagesTo( panelMessages );
             panelInput.focus();
         } else if ( 'column' === newMode ) {
+            // Sütun modunda araç listesi paneli yok — sohbet görünümüne dön.
+            if ( 'tools-list' === state.uiView ) {
+                showChatView();
+            }
             columnContainer.hidden = false;
             moveMessagesTo( columnContainer.querySelector( '.sa-column-messages' ) );
             setTimeout( () => {
@@ -298,13 +404,16 @@
         if ( ! confirm( SA.i18n.clearChat + '?' ) ) {
             return;
         }
+        const hadTool = !! state.activeTool;
         state.messages = [];
         state.history  = [];
         state.contextPostId = 0;
         state.suggestions = [];
+        state.activeTool = null;
         renderMessages();
         renderSuggestions();
         pushMessage( 'assistant', SA.i18n.welcomeMsg );
+        if ( hadTool ) updatePanelHeader();
     }
 
     // ===== Welcome bubble (sayfa açılınca sağ alttaki tanıtım balonu) =====
@@ -720,6 +829,7 @@
             } else {
                 body.message = text;
                 if ( state.contextPostId ) body.post_id = state.contextPostId;
+                if ( state.activeTool ) body.tool = state.activeTool.key;
             }
 
             const r = await fetch( endpoint, {
