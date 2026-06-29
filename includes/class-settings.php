@@ -237,6 +237,12 @@ class Settings {
     public function render_provider_field() {
         $opts    = smart_assistant_get_options();
         $presets = smart_assistant_get_provider_presets();
+        $notes   = wp_json_encode( array_column( $presets, 'note', 'note' ) );
+        // Her provider'ın notunu JS'e aktaracağız.
+        $provider_notes = [];
+        foreach ( $presets as $key => $p ) {
+            $provider_notes[ $key ] = $p['note'] ?? '';
+        }
         ?>
         <select id="smart_assistant_provider" name="smart_assistant_options[provider]">
             <?php foreach ( $presets as $key => $p ) : ?>
@@ -245,9 +251,28 @@ class Settings {
                 </option>
             <?php endforeach; ?>
         </select>
-        <p class="description">
-            <?php esc_html_e( 'MiniMax varsayılandır (OpenAI uyumlu). OpenAI, Gemini ve Anthropic de desteklenir.', 'smart-assistant' ); ?>
+        <p class="description" id="smart_assistant_provider_note">
+            <?php
+            $current_note = $presets[ $opts['provider'] ]['note'] ?? '';
+            if ( $current_note ) {
+                echo esc_html( $current_note );
+            } else {
+                esc_html_e( 'MiniMax varsayılandır (OpenAI uyumlu). Gemini ve Anthropic native API formatında çalışır.', 'smart-assistant' );
+            }
+            ?>
         </p>
+        <script>
+        (function(){
+            var notes = <?php echo wp_json_encode( $provider_notes ); ?>;
+            var sel   = document.getElementById('smart_assistant_provider');
+            var note  = document.getElementById('smart_assistant_provider_note');
+            if ( sel && note ) {
+                sel.addEventListener('change', function(){
+                    note.textContent = notes[this.value] || '';
+                });
+            }
+        })();
+        </script>
         <?php
     }
 

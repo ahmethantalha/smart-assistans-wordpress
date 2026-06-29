@@ -16,7 +16,7 @@ class Activator {
         if ( false === $existing ) {
             add_option( 'smart_assistant_options', [
                 'mode'               => 'simple',
-                'api_base_url'       => 'https://api.MiniMax.chat/v1',
+                'api_base_url'       => 'https://api.minimax.io/v1',
                 'model'              => 'MiniMax-M3',
                 'post_types'         => [ 'post' ],
                 'max_results'        => 5,

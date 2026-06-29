@@ -15,7 +15,7 @@
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Chat açıkken launcher'ı gizle — gönder butonuyla çakışmasın. */
+/* Chat açıkken launcher gizle */
 .sa-root.sa-mode-fab .sa-launcher,
 .sa-root.sa-mode-column .sa-launcher {
     display: none;
@@ -26,17 +26,17 @@
     position: fixed;
     right: 24px;
     bottom: 24px;
-    width: 56px;
-    height: 56px;
+    width: 52px;
+    height: 52px;
     border-radius: 50%;
     border: none;
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: #0f172a;
     color: #fff;
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
-    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22), 0 1px 4px rgba(0, 0, 0, 0.1);
     pointer-events: auto;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -44,11 +44,12 @@
 
 .sa-launcher:hover {
     transform: scale(1.06);
-    box-shadow: 0 10px 28px rgba(79, 70, 229, 0.55);
+    background: #1e293b;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
 .sa-launcher:focus-visible {
-    outline: 3px solid #c7d2fe;
+    outline: 3px solid #94a3b8;
     outline-offset: 2px;
 }
 
@@ -56,19 +57,19 @@
 .sa-panel {
     position: fixed;
     right: 24px;
-    bottom: 96px;
+    bottom: 88px;
     width: 380px;
     max-width: calc(100vw - 32px);
     height: 560px;
-    max-height: calc(100vh - 130px);
+    max-height: calc(100vh - 116px);
     background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 16px 48px rgba(15, 23, 42, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.16), 0 4px 16px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     pointer-events: auto;
-    border: 1px solid rgba(15, 23, 42, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.07);
     animation: sa-fade-in 0.2s ease;
 }
 
@@ -77,63 +78,82 @@
     to   { opacity: 1; transform: translateY(0); }
 }
 
+/* === Panel header === */
 .sa-panel-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: #0f172a;
     color: #fff;
-    padding: 14px 16px;
+    padding: 14px 14px 14px 16px;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-shrink: 0;
+    gap: 8px;
 }
 
 .sa-panel-title {
-    font-size: 15px;
+    font-size: 14px;
+    font-weight: 600;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    letter-spacing: -0.01em;
+    color: #fff;
+    flex: 1;
+    min-width: 0;
 }
 
 .sa-panel-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
 .sa-icon-btn {
-    background: rgba(255, 255, 255, 0.18);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     width: 28px;
     height: 28px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 14px;
-    transition: background 0.15s;
+    font-size: 13px;
+    transition: background 0.15s, color 0.15s;
 }
 
 .sa-icon-btn:hover {
-    background: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
 }
 
+/* === Messages area === */
 .sa-panel-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 14px;
-    background: #f8fafc;
+    padding: 16px;
+    background: #fff;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
+/* [hidden] özelliği display:flex/grid gibi author kurallarıyla aynı özgüllükte
+   olduğundan kaybedebilir — burada açıkça kazandırıyoruz. */
+.sa-panel-messages[hidden],
+.sa-tools-panel[hidden],
+.sa-suggestions[hidden] {
+    display: none !important;
+}
+
 /* === Mesaj balonları === */
 .sa-msg {
-    max-width: 86%;
+    max-width: 84%;
     padding: 10px 14px;
     border-radius: 14px;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 1.55;
     word-wrap: break-word;
     white-space: pre-wrap;
     position: relative;
@@ -141,26 +161,25 @@
 
 .sa-msg-user {
     align-self: flex-end;
-    background: #4f46e5;
+    background: #0f172a;
     color: #fff;
     border-bottom-right-radius: 4px;
 }
 
 .sa-msg-assistant {
     align-self: flex-start;
-    background: #fff;
+    background: #f1f5f9;
     color: #0f172a;
-    border: 1px solid #e2e8f0;
     border-bottom-left-radius: 4px;
 }
 
 .sa-msg-assistant a {
-    color: #4f46e5;
+    color: #2563eb;
     text-decoration: none;
-    border-bottom: 1px solid rgba(79, 70, 229, 0.3);
+    border-bottom: 1px solid rgba(37, 99, 235, 0.3);
 }
 .sa-msg-assistant a:hover {
-    border-bottom-color: #4f46e5;
+    border-bottom-color: #2563eb;
 }
 
 .sa-loading {
@@ -169,8 +188,8 @@
 }
 
 @keyframes sa-pulse {
-    0%, 100% { opacity: 0.5; }
-    50%      { opacity: 1; }
+    0%, 100% { opacity: 0.4; }
+    50%       { opacity: 0.9; }
 }
 
 /* === Sources === */
@@ -184,18 +203,18 @@
 }
 
 .sa-sources-title {
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
-    color: #475569;
+    color: #64748b;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
 }
 
 .sa-source {
     font-size: 12.5px;
-    color: #4f46e5;
+    color: #2563eb;
     text-decoration: none;
-    border-bottom: 1px dotted #c7d2fe;
+    border-bottom: 1px dotted #bfdbfe;
 }
 .sa-source:hover {
     border-bottom-style: solid;
@@ -203,9 +222,9 @@
 
 /* === Footer / Input === */
 .sa-panel-footer {
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #f1f5f9;
     background: #fff;
-    padding: 10px;
+    padding: 10px 12px;
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -228,35 +247,42 @@
 
 .sa-panel-input-row {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: flex-end;
 }
 
 .sa-panel-input,
 .sa-column-input {
     flex: 1;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #e2e8f0;
     border-radius: 10px;
-    padding: 8px 12px;
+    padding: 9px 12px;
     font-size: 14px;
     font-family: inherit;
     resize: none;
     max-height: 100px;
     min-height: 38px;
-    background: #fff;
+    background: #f8fafc;
     color: #0f172a;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
 .sa-panel-input:focus,
 .sa-column-input:focus {
     outline: none;
-    border-color: #4f46e5;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    border-color: #0f172a;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.07);
+}
+
+.sa-panel-input::placeholder,
+.sa-column-input::placeholder {
+    color: #94a3b8;
 }
 
 .sa-panel-send,
 .sa-column-send {
-    background: #4f46e5;
+    background: #0f172a;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -265,12 +291,14 @@
     cursor: pointer;
     font-weight: 600;
     font-size: 14px;
+    letter-spacing: -0.01em;
     transition: background 0.15s;
+    white-space: nowrap;
 }
 
 .sa-panel-send:hover,
 .sa-column-send:hover {
-    background: #4338ca;
+    background: #1e293b;
 }
 
 /* === Column mode (sağda sabit sütun) === */
@@ -283,7 +311,7 @@
     max-width: 100vw;
     background: #fff;
     border-left: 1px solid #e2e8f0;
-    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.08);
+    box-shadow: -4px 0 24px rgba(0, 0, 0, 0.08);
     z-index: 99997;
     display: flex;
     flex-direction: column;
@@ -296,32 +324,35 @@
 }
 
 .sa-column-header {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: #0f172a;
     color: #fff;
-    padding: 14px 18px;
+    padding: 16px 14px 16px 18px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-size: 15px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
 }
 
 .sa-column-actions {
     display: flex;
-    gap: 6px;
+    gap: 4px;
 }
 
 .sa-column-messages {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
-    background: #f8fafc;
+    background: #fff;
     display: flex;
     flex-direction: column;
     gap: 12px;
 }
 
 .sa-column-footer {
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #f1f5f9;
     padding: 12px;
     display: flex;
     flex-direction: column;
@@ -331,11 +362,10 @@
 
 .sa-column-input-row {
     display: flex;
-    gap: 6px;
+    gap: 8px;
     align-items: flex-end;
 }
 
-/* Site içeriğini column modunda daralt */
 body.sa-column-active {
     margin-right: 400px;
     transition: margin-right 0.25s ease;
@@ -355,78 +385,189 @@ body.sa-column-active {
     }
 }
 
-/* === Suggestions (özet sonrası önerilen soru baloncukları) === */
+/* === Suggestions === */
 .sa-suggestions {
-    padding: 10px 14px 12px;
-    background: linear-gradient(180deg, #fafafa 0%, #ffffff 100%);
-    border-top: 1px solid #e2e8f0;
+    padding: 10px 12px 12px;
+    background: #fff;
+    border-top: 1px solid #f1f5f9;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    animation: sa-suggestions-in 0.35s ease;
+    gap: 6px;
+    animation: sa-suggestions-in 0.3s ease;
 }
 
 @keyframes sa-suggestions-in {
-    from { opacity: 0; transform: translateY(8px); }
+    from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
 }
 
 .sa-suggestions-title {
-    font-size: 11.5px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
+    letter-spacing: 0.06em;
+    color: #94a3b8;
 }
 
 .sa-suggestion-chip {
-    background: #fff;
-    border: 1px solid #cbd5e1;
-    border-radius: 12px;
-    padding: 10px 14px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 9px 12px;
     font-size: 13.5px;
     line-height: 1.4;
     color: #1e293b;
     text-align: left;
     cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
     font-family: inherit;
-    min-height: 44px; /* parmak dostu (mobil) */
+    min-height: 40px;
     display: block;
     width: 100%;
     word-wrap: break-word;
 }
 
 .sa-suggestion-chip:hover {
-    transform: translateY(-1px);
-    border-color: #4f46e5;
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
-    background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%);
+    background: #f1f5f9;
+    border-color: #0f172a;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .sa-suggestion-chip:active {
-    transform: translateY(0);
+    background: #e2e8f0;
 }
 
 @media (max-width: 480px) {
     .sa-suggestion-chip {
         font-size: 14px;
-        padding: 12px 14px;
+        padding: 10px 12px;
     }
+}
+
+/* === Testler (hesaplayıcılar) paneli === */
+.sa-tools-panel {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sa-tools-hint {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 4px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.sa-tool-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-align: left;
+    font-family: inherit;
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.sa-tool-card:hover {
+    border-color: #0f172a;
+    background: #f8fafc;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
+}
+
+.sa-tool-card:active {
+    background: #f1f5f9;
+}
+
+.sa-tool-icon {
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.sa-tool-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sa-tool-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+}
+
+.sa-tool-desc {
+    font-size: 12.5px;
+    color: #64748b;
+    line-height: 1.35;
+}
+
+.sa-tool-arrow {
+    color: #cbd5e1;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+/* Header'daki "← Testler" geri dönüş butonu */
+.sa-tool-back {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 6px;
+    padding: 0 10px;
+    height: 26px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: inherit;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.sa-tool-back:hover {
+    background: rgba(255, 255, 255, 0.22);
+    color: #fff;
 }
 
 /* === Scrollbar === */
 .sa-panel-messages::-webkit-scrollbar,
-.sa-column-messages::-webkit-scrollbar {
-    width: 6px;
+.sa-column-messages::-webkit-scrollbar,
+.sa-tools-panel::-webkit-scrollbar {
+    width: 4px;
 }
 .sa-panel-messages::-webkit-scrollbar-thumb,
-.sa-column-messages::-webkit-scrollbar-thumb {
-    background: #cbd5e1;
-    border-radius: 3px;
+.sa-column-messages::-webkit-scrollbar-thumb,
+.sa-tools-panel::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 2px;
 }
 .sa-panel-messages::-webkit-scrollbar-thumb:hover,
-.sa-column-messages::-webkit-scrollbar-thumb:hover {
+.sa-column-messages::-webkit-scrollbar-thumb:hover,
+.sa-tools-panel::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
@@ -434,16 +575,16 @@ body.sa-column-active {
 .sa-welcome-bubble {
     position: fixed;
     right: 24px;
-    bottom: 96px;
+    bottom: 84px;
     background: #fff;
     color: #0f172a;
-    border-radius: 16px;
+    border-radius: 14px;
     padding: 14px 18px 12px;
     max-width: 300px;
     z-index: 99994;
-    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(0, 0, 0, 0.06);
-    border: 1px solid rgba(15, 23, 42, 0.06);
-    animation: sa-welcome-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    animation: sa-welcome-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-size: 14px;
     line-height: 1.45;
     pointer-events: auto;
@@ -451,12 +592,12 @@ body.sa-column-active {
 
 .sa-welcome-bubble.is-leaving {
     opacity: 0;
-    transform: translateY(20px) scale(0.92);
-    transition: opacity 0.25s ease, transform 0.25s ease;
+    transform: translateY(12px) scale(0.95);
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 @keyframes sa-welcome-in {
-    from { opacity: 0; transform: translateY(20px) scale(0.92); }
+    from { opacity: 0; transform: translateY(16px) scale(0.94); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
@@ -468,7 +609,7 @@ body.sa-column-active {
     border: none;
     cursor: pointer;
     color: #94a3b8;
-    font-size: 18px;
+    font-size: 16px;
     width: 24px;
     height: 24px;
     display: inline-flex;
@@ -484,39 +625,38 @@ body.sa-column-active {
 }
 
 .sa-welcome-bubble-text {
-    margin: 0 24px 10px 0;
+    margin: 0 24px 12px 0;
     color: #1e293b;
 }
 
 .sa-welcome-bubble-cta {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: #0f172a;
     color: #fff;
     border: none;
-    padding: 7px 14px;
+    padding: 8px 14px;
     border-radius: 8px;
     cursor: pointer;
     font-size: 13px;
     font-weight: 600;
-    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: -0.01em;
+    transition: background 0.15s;
 }
 .sa-welcome-bubble-cta:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    background: #1e293b;
 }
 
 .sa-welcome-bubble-tail {
     position: absolute;
     bottom: -7px;
-    right: 24px;
+    right: 20px;
     width: 14px;
     height: 14px;
     background: #fff;
     transform: rotate(45deg);
-    border-right: 1px solid rgba(15, 23, 42, 0.06);
-    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    border-right: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
 }
 
-/* Chat açıkken welcome bubble gizlensin. */
 .sa-root.sa-mode-fab .sa-welcome-bubble,
 .sa-root.sa-mode-column .sa-welcome-bubble {
     display: none;
@@ -526,22 +666,18 @@ body.sa-column-active {
     .sa-welcome-bubble {
         right: 12px;
         left: 12px;
-        bottom: 88px;
+        bottom: 80px;
         max-width: none;
     }
     .sa-welcome-bubble-tail {
-        right: 32px;
+        right: 30px;
     }
 }
 
 /* === Markdown içerik stilleri === */
-.sa-msg-assistant {
-    /* Asistan balonu içindeki markdown stilleri */
-}
-
 .sa-msg-assistant p {
     margin: 0 0 8px;
-    line-height: 1.55;
+    line-height: 1.6;
 }
 .sa-msg-assistant p:last-child {
     margin-bottom: 0;
@@ -556,12 +692,12 @@ body.sa-column-active {
     margin: 12px 0 6px;
     font-weight: 700;
     line-height: 1.3;
-    color: #1e293b;
+    color: #0f172a;
 }
-.sa-msg-assistant h1 { font-size: 19px; }
-.sa-msg-assistant h2 { font-size: 17px; }
-.sa-msg-assistant h3 { font-size: 15.5px; }
-.sa-msg-assistant h4 { font-size: 14.5px; }
+.sa-msg-assistant h1 { font-size: 18px; }
+.sa-msg-assistant h2 { font-size: 16px; }
+.sa-msg-assistant h3 { font-size: 15px; }
+.sa-msg-assistant h4,
 .sa-msg-assistant h5,
 .sa-msg-assistant h6 { font-size: 14px; }
 .sa-msg-assistant h2:first-child,
@@ -574,7 +710,6 @@ body.sa-column-active {
     font-weight: 700;
     color: #0f172a;
 }
-
 .sa-msg-assistant em {
     font-style: italic;
 }
@@ -582,7 +717,7 @@ body.sa-column-active {
 .sa-msg-assistant ul,
 .sa-msg-assistant ol {
     margin: 6px 0 10px;
-    padding-left: 22px;
+    padding-left: 20px;
 }
 .sa-msg-assistant li {
     margin: 3px 0;
@@ -593,8 +728,8 @@ body.sa-column-active {
 }
 
 .sa-msg-assistant code {
-    background: #f1f5f9;
-    color: #be185d;
+    background: #e2e8f0;
+    color: #0f172a;
     padding: 1px 5px;
     border-radius: 4px;
     font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
@@ -604,12 +739,12 @@ body.sa-column-active {
 .sa-msg-assistant pre {
     background: #0f172a;
     color: #e2e8f0;
-    padding: 10px 12px;
+    padding: 12px 14px;
     border-radius: 8px;
     overflow-x: auto;
     margin: 8px 0;
     font-size: 12.5px;
-    line-height: 1.5;
+    line-height: 1.55;
 }
 .sa-msg-assistant pre code {
     background: transparent;
@@ -620,41 +755,40 @@ body.sa-column-active {
 }
 
 .sa-msg-assistant blockquote {
-    border-left: 3px solid #cbd5e1;
+    border-left: 3px solid #0f172a;
     margin: 8px 0;
     padding: 4px 12px;
     color: #475569;
     background: #f8fafc;
-    border-radius: 0 4px 4px 0;
+    border-radius: 0 6px 6px 0;
 }
 
 .sa-msg-assistant a {
-    color: #4f46e5;
+    color: #2563eb;
     text-decoration: none;
-    border-bottom: 1px solid rgba(79, 70, 229, 0.3);
+    border-bottom: 1px solid rgba(37, 99, 235, 0.3);
     word-break: break-all;
 }
 .sa-msg-assistant a:hover {
-    border-bottom-color: #4f46e5;
-    color: #4338ca;
+    border-bottom-color: #2563eb;
+    color: #1d4ed8;
 }
 
-/* Markdown liste'ler düz <br> ile değil, gerçek listeyle gelsin. */
 .sa-msg-assistant ul li,
 .sa-msg-assistant ol li {
     word-wrap: break-word;
 }
 
-/* =========================== Mesaj kopyalama butonu =========================== */
+/* === Mesaj kopyalama butonu === */
 .sa-msg-copy {
     position: absolute;
     top: 6px;
     right: 6px;
-    width: 26px;
-    height: 26px;
+    width: 24px;
+    height: 24px;
     border-radius: 6px;
     border: 1px solid transparent;
-    background: rgba(255, 255, 255, 0.7);
+    background: rgba(255, 255, 255, 0.85);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
     color: #64748b;
@@ -676,8 +810,8 @@ body.sa-column-active {
 
 .sa-msg-copy:hover {
     background: #fff;
-    color: #4f46e5;
-    border-color: #c7d2fe;
+    color: #0f172a;
+    border-color: #e2e8f0;
 }
 
 .sa-msg-copy:active {
@@ -690,19 +824,17 @@ body.sa-column-active {
     background: #ecfdf5;
 }
 
-/* Koyu renkli user balonu için: butonu biraz farklı göster */
 .sa-msg-user .sa-msg-copy {
-    background: rgba(255, 255, 255, 0.18);
-    color: rgba(255, 255, 255, 0.85);
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.65);
 }
 .sa-msg-user .sa-msg-copy:hover {
-    background: rgba(255, 255, 255, 0.32);
+    background: rgba(255, 255, 255, 0.22);
     color: #fff;
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: rgba(255, 255, 255, 0.28);
 }
 
-/* Mobilde hover yok, dokunma için her zaman görünür */
 @media (max-width: 640px) {
-    .sa-msg-copy { opacity: 0.65; }
+    .sa-msg-copy { opacity: 0.55; }
     .sa-msg-copy.is-copied { opacity: 1; }
 }

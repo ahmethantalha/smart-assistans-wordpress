@@ -1,0 +1,19 @@
+includes:
+    - vendor/szepeviktor/phpstan-wordpress/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - smart-assistant.php
+        - includes/
+        - admin/
+        - public/
+    excludePaths:
+        - vendor/
+        - tests/
+    # WordPress stubs; szepeviktor/phpstan-wordpress ile otomatik yüklenir.
+    checkMissingIterableValueType: false
+    # $wpdb->prepare ve prepare() pattern'ı için false-positive bastır.
+    ignoreErrors:
+        - '#Call to an undefined method wpdb::#'
+        - '#Variable \$wpdb might not be defined#'

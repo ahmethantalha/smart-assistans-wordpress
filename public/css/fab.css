@@ -4,14 +4,12 @@
 
 /*
  * FAB launcher'ın solunda (yan yana, aynı dikey seviye).
- *   Launcher: right: 24, 56x56 → sol kenarı ~80px
- *   FAB:      right: 90 (24 + 56 + 10 gap), bottom: 24
- * Böylece mobil back-to-top gibi diğer sağ-alt elementleriyle de
- * çakışma riski azalır ve kullanıcı iki butonu net ayırt eder.
+ *   Launcher: right: 24, 52x52 → sol kenarı ~76px
+ *   FAB:      right: 86 (24 + 52 + 10 gap), bottom: 24
  */
 .sa-fab-container {
     position: fixed;
-    right: 90px;
+    right: 86px;
     bottom: 24px;
     z-index: 99996;
     pointer-events: none;
@@ -26,41 +24,44 @@
 }
 
 .sa-fab {
-    background: linear-gradient(135deg, #7c3aed 0%, #ec4899 100%);
+    background: #1e293b;
     color: #fff;
     border: none;
     border-radius: 28px;
-    padding: 12px 18px 12px 14px;
+    padding: 0 18px 0 14px;
+    height: 42px;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 600;
-    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    letter-spacing: -0.01em;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 .sa-fab:hover {
-    transform: scale(1.05) translateY(-2px);
-    box-shadow: 0 12px 28px rgba(124, 58, 237, 0.5);
+    transform: translateY(-2px);
+    background: #0f172a;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.24);
+}
+
+.sa-fab:active {
+    transform: translateY(0);
 }
 
 .sa-fab:focus-visible {
-    outline: 3px solid #fbcfe8;
+    outline: 3px solid #94a3b8;
     outline-offset: 2px;
 }
 
 .sa-fab-icon {
-    font-size: 16px;
+    font-size: 15px;
 }
 
-.sa-fab-label {
-    letter-spacing: 0.01em;
-}
-
-/* Chat açıkken FAB'ı gizle — gönder butonu ile çakışmasın. */
+/* Chat açıkken FAB gizle */
 .sa-root.sa-mode-fab .sa-fab-container,
 .sa-root.sa-mode-column .sa-fab-container {
     display: none !important;
@@ -68,16 +69,16 @@
 
 @media (max-width: 640px) {
     .sa-fab-container {
-        right: 88px;
+        right: 84px;
         bottom: 24px;
     }
     .sa-fab-label {
         display: none;
     }
     .sa-fab {
-        padding: 12px;
-        width: 48px;
-        height: 48px;
+        width: 44px;
+        height: 44px;
+        padding: 0;
         border-radius: 50%;
         justify-content: center;
     }

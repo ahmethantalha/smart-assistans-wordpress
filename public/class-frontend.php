@@ -53,6 +53,7 @@ class Frontend {
                 'greeting' => $identity['greeting'],
                 'signature'=> $identity['show_signature'] ? '— ' . $identity['name'] : '',
             ],
+            'tools'    => $this->get_tools_for_js(),
             'i18n'     => [
                 'askPlaceholder'   => __( 'Bir şey sor…', 'smart-assistant' ),
                 'send'             => __( 'Gönder', 'smart-assistant' ),
@@ -70,6 +71,8 @@ class Frontend {
                 'suggestionsTitle' => __( 'Sorabilirsin', 'smart-assistant' ),
                 'welcomeCTA'       => __( '💬 Sohbete başla', 'smart-assistant' ),
                 'minimize'         => __( 'Küçült', 'smart-assistant' ),
+                'tests'            => __( 'Testler', 'smart-assistant' ),
+                'testsHint'        => __( 'Size yardımcı olabilecek hesaplayıcılar', 'smart-assistant' ),
             ],
         ];
 
@@ -84,5 +87,25 @@ class Frontend {
             );
             // Not: FAB davranışı widget.js içinde zaten kuruluyor (isSingle true ise buildFab()).
         }
+    }
+
+    /**
+     * Testler panelinde gösterilecek araç listesi. system_prompt buraya
+     * dahil edilmez — yalnızca 'key' frontend'den REST isteğiyle geri döner,
+     * gerçek prompt sunucu tarafında AIClient içinde eşleştirilir.
+     */
+    private function get_tools_for_js() {
+        $tools = smart_assistant_get_tools();
+        $out   = [];
+        foreach ( $tools as $key => $tool ) {
+            $out[] = [
+                'key'         => $key,
+                'label'       => $tool['label'],
+                'description' => $tool['description'],
+                'icon'        => $tool['icon'],
+                'welcomeMsg'  => $tool['welcome_msg'],
+            ];
+        }
+        return $out;
     }
 }

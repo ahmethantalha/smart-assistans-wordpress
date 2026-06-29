@@ -27,7 +27,9 @@ class Search {
         // Belirli bir post bağlamında çalışıyorsak (FAB özetleme)
         if ( $post_id > 0 ) {
             $post = get_post( $post_id );
-            if ( $post && in_array( $post->post_type, (array) $opts['post_types'], true ) ) {
+            if ( $post
+                 && in_array( $post->post_type, (array) $opts['post_types'], true )
+                 && $this->is_post_readable( $post ) ) {
                 return [ $this->format_post( $post ) ];
             }
         }
@@ -79,10 +81,30 @@ class Search {
      */
     public function get_post( $post_id ) {
         $post = get_post( $post_id );
-        if ( ! $post ) {
+        if ( ! $post || ! $this->is_post_readable( $post ) ) {
             return null;
         }
         return $this->format_post( $post, true );
+    }
+
+    /**
+     * Bir post'un public uçlardan okunabilir olup olmadığını döndürür.
+     *
+     * Yayınlanmış (publish) içerik herkese açıktır. Taslak / özel / beklemedeki
+     * içerikler yalnızca o post'u okuma yetkisi olan oturum açmış kullanıcılara
+     * (yazar / editör) gösterilir. Bu, /summarize gibi public endpoint'lerden
+     * yayınlanmamış içeriğin sızmasını engeller.
+     *
+     * @param \WP_Post|\stdClass $post
+     * @return bool
+     */
+    private function is_post_readable( $post ) {
+        $status = isset( $post->post_status ) ? $post->post_status : '';
+        if ( 'publish' === $status ) {
+            return true;
+        }
+        $id = isset( $post->ID ) ? (int) $post->ID : 0;
+        return $id > 0 && current_user_can( 'read_post', $id );
     }
 
     private function format_post( $post, $full_content = false ) {
@@ -124,17 +146,6 @@ class Search {
             'word_count' => max( 1, count( preg_split( '/\s+/u', $raw ) ) ),
             'truncated'  => $truncated,
         ];
-    }
-
-    private function has_fulltext() {
-        global $wpdb;
-        $row = $wpdb->get_row( "SHOW INDEX FROM {$wpdb->posts} WHERE Key_name = '{$wpdb->prefix}post_title_fulltext'" );
-        return ! empty( $row );
-    }
-
-    private function is_mysql_compatible_query( $q ) {
-        // FULLTEXT için minimum 4 karakter (innodb_ft_min_token_size).
-        return mb_strlen( $q ) >= 4;
     }
 
     /**

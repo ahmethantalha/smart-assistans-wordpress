@@ -259,8 +259,19 @@ class OpenNotebook {
             }
 
             // Fallback: title ile WP post bul.
+            // get_page_by_title() WP 6.2'den beri deprecated; WP_Query 'title' parametresi
+            // (WP 4.4+) ile başlık eşleşmesi yaparız.
             if ( ! empty( $s['title'] ) ) {
-                $post = get_page_by_title( $s['title'], OBJECT, $post_types );
+                $tq = new \WP_Query( [
+                    'title'          => $s['title'],
+                    'post_type'      => $post_types,
+                    'post_status'    => 'publish',
+                    'posts_per_page' => 1,
+                    'no_found_rows'  => true,
+                    'ignore_sticky_posts' => true,
+                ] );
+                $post = $tq->have_posts() ? $tq->posts[0] : null;
+                wp_reset_postdata();
                 if ( $post ) {
                     $s['url']     = get_permalink( $post );
                     $s['post_id'] = $post->ID;
