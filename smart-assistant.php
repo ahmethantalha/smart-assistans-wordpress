@@ -3,7 +3,7 @@
  * Plugin Name:       Smart Assistant
  * Plugin URI:        https://github.com/ahmethantalha/smart-assistans-wordpress
  * Description:       AI destekli site asistanı — MiniMax API ile sitenizin içeriklerinden hareketle cevap verir. Sağ alt köşede chatbot widget ve makale özetleme butonu. Mod 1: yerleşik WP araması. Mod 2: Open Notebook (MCP) entegrasyonu.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ahmethan T. Gültekin
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // === Sabitler ===
-define( 'SMART_ASSISTANT_VERSION', '1.0.0' );
+define( 'SMART_ASSISTANT_VERSION', '1.0.1' );
 define( 'SMART_ASSISTANT_FILE', __FILE__ );
 define( 'SMART_ASSISTANT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SMART_ASSISTANT_URL', plugin_dir_url( __FILE__ ) );
@@ -60,6 +60,23 @@ spl_autoload_register( function ( $class ) {
 
 // === Yardımcılar ===
 require_once SMART_ASSISTANT_PATH . 'includes/helpers.php';
+
+// === GitHub üzerinden otomatik güncelleme ===
+require_once SMART_ASSISTANT_PATH . 'includes/libs/plugin-update-checker/plugin-update-checker.php';
+
+add_action( 'init', function () {
+    $update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/ahmethantalha/smart-assistans-wordpress/',
+        SMART_ASSISTANT_FILE,
+        'smart-assistant'
+    );
+
+    $update_checker->setBranch( 'master' );
+
+    // Sürüm zip'leri GitHub Release'lerine eklenen asset'lerden indirilir
+    // (otomatik oluşturulan "source code" zip'i değil — klasör adı uyuşmaz).
+    $update_checker->getVcsApi()->enableReleaseAssets();
+}, 1 );
 
 // === Aktivasyon / Deaktivasyon ===
 register_activation_hook( __FILE__, [ \SmartAssistant\Activator::class, 'activate' ] );

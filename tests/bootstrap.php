@@ -10,7 +10,7 @@ require_once dirname( __DIR__ ) . '/vendor/autoload.php';
 
 // ── WordPress sabitleri ──────────────────────────────────────────────────────
 define( 'ABSPATH',                    sys_get_temp_dir() . '/' );
-define( 'SMART_ASSISTANT_VERSION',    '1.0.0' );
+define( 'SMART_ASSISTANT_VERSION',    '1.0.1' );
 define( 'SMART_ASSISTANT_FILE',       dirname( __DIR__ ) . '/smart-assistant.php' );
 define( 'SMART_ASSISTANT_PATH',       dirname( __DIR__ ) . '/' );
 define( 'SMART_ASSISTANT_URL',        'https://example.com/wp-content/plugins/smart-assistant/' );
