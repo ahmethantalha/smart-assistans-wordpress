@@ -311,7 +311,7 @@ class RestController {
         $ip      = $this->get_client_ip();
         $enforce = (bool) apply_filters( 'smart_assistant_enforce_nonce', true );
         $nonce   = $this->extract_nonce( $request );
-        $valid   = '' !== $nonce && false !== wp_verify_nonce( $nonce, 'smart_assistant_nonce' );
+        $valid   = '' !== $nonce && false !== wp_verify_nonce( $nonce, 'wp_rest' );
 
         if ( ! $valid ) {
             smart_assistant_log(
