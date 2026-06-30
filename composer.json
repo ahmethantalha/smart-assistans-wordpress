@@ -1,0 +1,42 @@
+{
+    "name": "smartassistant/smart-assistant",
+    "description": "AI destekli WordPress site asistanı",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "authors": [
+        {
+            "name": "Ahmethan T. Gültekin",
+            "homepage": "https://github.com/ahmethantalha"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/ahmethantalha/smart-assistans-wordpress/issues",
+        "source": "https://github.com/ahmethantalha/smart-assistans-wordpress"
+    },
+    "require": {
+        "php": ">=7.4"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5",
+        "brain/monkey": "^2.6",
+        "wp-coding-standards/wpcs": "^3.1",
+        "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+        "phpstan/phpstan": "^1.12",
+        "szepeviktor/phpstan-wordpress": "^1.3"
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "SmartAssistant\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "dealerdirect/phpcodesniffer-composer-installer": true
+        }
+    },
+    "scripts": {
+        "test":    "phpunit --colors=always",
+        "lint":    "phpcs",
+        "analyse": "phpstan analyse --no-progress"
+    }
+}
