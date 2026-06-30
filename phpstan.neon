@@ -11,9 +11,15 @@ parameters:
     excludePaths:
         - vendor/
         - tests/
+        - includes/libs/
+    scanDirectories:
+        - includes/libs/
     # WordPress stubs; szepeviktor/phpstan-wordpress ile otomatik yüklenir.
     checkMissingIterableValueType: false
     # $wpdb->prepare ve prepare() pattern'ı için false-positive bastır.
     ignoreErrors:
         - '#Call to an undefined method wpdb::#'
         - '#Variable \$wpdb might not be defined#'
+        # plugin-update-checker, sürüm sınıflarını "if ( !class_exists(...) )" bloğu
+        # içinde tanımlıyor; PHPStan bu koşullu tanımı statik olarak çözemiyor.
+        - '#on an unknown class YahnisElsts\\PluginUpdateChecker\\#'

@@ -61,6 +61,23 @@ spl_autoload_register( function ( $class ) {
 // === Yardımcılar ===
 require_once SMART_ASSISTANT_PATH . 'includes/helpers.php';
 
+// === GitHub üzerinden otomatik güncelleme ===
+require_once SMART_ASSISTANT_PATH . 'includes/libs/plugin-update-checker/plugin-update-checker.php';
+
+add_action( 'init', function () {
+    $update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+        'https://github.com/ahmethantalha/smart-assistans-wordpress/',
+        SMART_ASSISTANT_FILE,
+        'smart-assistant'
+    );
+
+    $update_checker->setBranch( 'master' );
+
+    // Sürüm zip'leri GitHub Release'lerine eklenen asset'lerden indirilir
+    // (otomatik oluşturulan "source code" zip'i değil — klasör adı uyuşmaz).
+    $update_checker->getVcsApi()->enableReleaseAssets();
+}, 1 );
+
 // === Aktivasyon / Deaktivasyon ===
 register_activation_hook( __FILE__, [ \SmartAssistant\Activator::class, 'activate' ] );
 register_deactivation_hook( __FILE__, [ \SmartAssistant\Deactivator::class, 'deactivate' ] );

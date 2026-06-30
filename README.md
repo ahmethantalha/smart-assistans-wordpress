@@ -204,6 +204,19 @@ node --check public/js/widget.js
 5. Modu `smart_assistant_get_options()` defaults'a ekle
 6. `Settings` sayfasına UI alanı ekle
 
+### Yeni sürüm yayınlama (GitHub Release)
+
+Eklenti, kurulu olduğu WordPress sitelerine GitHub Releases üzerinden otomatik güncelleme bildirimi gösterir ([plugin-update-checker](https://github.com/YahnisElsts/plugin-update-checker) kütüphanesi ile, `includes/libs/` altında gömülü). Bunun çalışması için her sürümde:
+
+1. `smart-assistant.php` üst bilgisindeki `Version:` ve `SMART_ASSISTANT_VERSION` sabitini, ayrıca `tests/bootstrap.php`'deki aynı sabiti güncelleyin.
+2. Eklenti klasörünü **`smart-assistant/`** adıyla zip'leyin (klasör adı bu olmalı, repo adıyla karışmamalı):
+   ```bash
+   zip -r smart-assistant-X.Y.Z.zip smart-assistant/ -x "*.git*" "vendor/*" "tests/*" "node_modules/*"
+   ```
+3. GitHub'da `vX.Y.Z` formatında bir tag ile Release oluşturun (`master` branch üzerinden) ve bu zip dosyasını **Release asset'i** olarak ekleyin.
+   - ⚠️ GitHub'ın otomatik oluşturduğu "Source code (zip)" kullanılmaz — onun içindeki klasör adı repo adına göre olduğundan (`smart-assistans-wordpress-X.Y.Z`), WordPress güncellemeyi yanlış klasöre kurar ve ayarlar kaybolabilir. Mutlaka adım 2'deki, doğru klasör adına sahip zip'i asset olarak yükleyin.
+4. Yayınlandıktan sonra kurulu sitelerde Eklentiler sayfasında güncelleme bildirimi 12 saat içinde (veya **Güncellemeleri Denetle** ile anında) görünür.
+
 ---
 
 ## 📝 Lisans
