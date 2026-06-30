@@ -835,7 +835,7 @@
             const r = await fetch( endpoint, {
                 method: 'POST',
                 credentials: 'same-origin',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': SA.nonce },
                 body: JSON.stringify( body ),
             } );
 

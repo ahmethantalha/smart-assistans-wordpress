@@ -43,7 +43,7 @@ class Frontend {
 
         $localize = [
             'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1/' ) ),
-            'nonce'    => wp_create_nonce( 'smart_assistant_nonce' ),
+            'nonce'    => wp_create_nonce( 'wp_rest' ),
             'isSingle' => (bool) $is_single_post,
             'postId'   => $is_single_post ? (int) get_queried_object_id() : 0,
             'postType' => $is_single_post ? (string) get_post_type() : '',
