@@ -73,6 +73,7 @@ class Frontend {
                 'minimize'         => __( 'Küçült', 'smart-assistant' ),
                 'tests'            => __( 'Testler', 'smart-assistant' ),
                 'testsHint'        => __( 'Size yardımcı olabilecek hesaplayıcılar', 'smart-assistant' ),
+                'backToChat'       => __( 'Sohbet', 'smart-assistant' ),
             ],
         ];
 

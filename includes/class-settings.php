@@ -191,6 +191,30 @@ class Settings {
         $out['ai_examples']    = sanitize_textarea_field( $input['ai_examples'] ?? '' );
         $out['show_signature'] = ! empty( $input['show_signature'] );
 
+        // Testler (hesaplayıcılar): formdan tools_submitted=1 gelirse işle.
+        if ( ! empty( $input['tools_submitted'] ) ) {
+            $raw_tools       = is_array( $input['tools'] ?? null ) ? $input['tools'] : [];
+            $sanitized_tools = [];
+            foreach ( $raw_tools as $t ) {
+                if ( ! is_array( $t ) ) {
+                    continue;
+                }
+                $key = sanitize_key( $t['key'] ?? '' );
+                if ( '' === $key ) {
+                    continue;
+                }
+                $sanitized_tools[] = [
+                    'key'           => $key,
+                    'label'         => sanitize_text_field( $t['label'] ?? '' ),
+                    'icon'          => sanitize_text_field( $t['icon'] ?? '🤖' ),
+                    'description'   => sanitize_text_field( $t['description'] ?? '' ),
+                    'welcome_msg'   => sanitize_textarea_field( $t['welcome_msg'] ?? '' ),
+                    'system_prompt' => wp_kses_post( $t['system_prompt'] ?? '' ),
+                ];
+            }
+            $out['tools'] = $sanitized_tools;
+        }
+
         add_settings_error( 'smart_assistant_options', 'smart_assistant_saved', __( 'Ayarlar kaydedildi.', 'smart-assistant' ), 'updated' );
         return $out;
     }

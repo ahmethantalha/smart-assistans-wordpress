@@ -192,6 +192,11 @@
         if ( 'tools-list' === state.uiView ) {
             panelTitleEl.appendChild( document.createTextNode( '🧪 ' ) );
             panelTitleEl.appendChild( el( 'strong', {}, SA.i18n.tests ) );
+            panelActionsEl.appendChild( el( 'button', {
+                className: 'sa-tool-back',
+                type: 'button',
+                onClick: showChatView,
+            }, '← ' + ( SA.i18n.backToChat || 'Sohbet' ) ) );
             panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
         } else if ( state.activeTool ) {
             panelTitleEl.appendChild( document.createTextNode( state.activeTool.icon + ' ' ) );

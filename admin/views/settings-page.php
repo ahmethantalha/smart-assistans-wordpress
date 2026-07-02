@@ -64,6 +64,10 @@ $sections = [
                 <span class="sa-nav-icon" aria-hidden="true">⚙️</span>
                 <?php esc_html_e( 'Gelişmiş', 'smart-assistant' ); ?>
             </a>
+            <a href="#section-tools"    class="sa-nav-link" data-target="section-tools">
+                <span class="sa-nav-icon" aria-hidden="true">🧪</span>
+                <?php esc_html_e( 'Testler', 'smart-assistant' ); ?>
+            </a>
             <a href="#section-test"     class="sa-nav-link" data-target="section-test">
                 <span class="sa-nav-icon" aria-hidden="true">🔌</span>
                 <?php esc_html_e( 'Test', 'smart-assistant' ); ?>
@@ -175,6 +179,83 @@ $sections = [
                 </div>
                 <div class="sa-card-body">
                     <?php smart_assistant_render_section( 'smart_assistant_advanced' ); ?>
+                </div>
+            </section>
+
+            <?php
+            $current_tools = smart_assistant_get_tools();
+            $tool_idx      = 0;
+            ?>
+            <section id="section-tools" class="sa-card" data-section="tools">
+                <div class="sa-card-head">
+                    <div>
+                        <h2 class="sa-card-title"><?php esc_html_e( 'Testler', 'smart-assistant' ); ?></h2>
+                        <p class="sa-card-sub"><?php esc_html_e( 'Chatbot\'ta gösterilen hesaplayıcı araçları ekle, düzenle veya sil.', 'smart-assistant' ); ?></p>
+                    </div>
+                    <span class="sa-badge sa-badge-info"><?php echo esc_html( count( $current_tools ) ); ?></span>
+                </div>
+                <div class="sa-card-body">
+                    <input type="hidden" name="smart_assistant_options[tools_submitted]" value="1" />
+                    <div id="sa-tools-list">
+                    <?php foreach ( $current_tools as $tool_key => $tool ) : ?>
+                        <div class="sa-tool-row" data-index="<?php echo esc_attr( $tool_idx ); ?>">
+                            <div class="sa-tool-row-summary">
+                                <span class="sa-tool-row-icon sa-tool-preview-icon"><?php echo esc_html( $tool['icon'] ); ?></span>
+                                <div class="sa-tool-row-info">
+                                    <strong class="sa-tool-preview-label"><?php echo esc_html( $tool['label'] ); ?></strong>
+                                    <code class="sa-tool-preview-key"><?php echo esc_html( $tool_key ); ?></code>
+                                    <span class="sa-tool-preview-desc"><?php echo esc_html( $tool['description'] ); ?></span>
+                                </div>
+                                <div class="sa-tool-row-btns">
+                                    <button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-toggle"><?php esc_html_e( 'Düzenle', 'smart-assistant' ); ?></button>
+                                    <button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-delete" style="color:var(--sa-red-500)"><?php esc_html_e( 'Sil', 'smart-assistant' ); ?></button>
+                                </div>
+                            </div>
+                            <div class="sa-tool-edit-fields" hidden>
+                                <div class="sa-tool-fields-grid">
+                                    <label><?php esc_html_e( 'Anahtar (key)', 'smart-assistant' ); ?><br>
+                                        <input type="text" name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][key]"
+                                               value="<?php echo esc_attr( $tool_key ); ?>" class="regular-text sa-tf-key"
+                                               placeholder="<?php esc_attr_e( 'örn. bmi_hesapla', 'smart-assistant' ); ?>" />
+                                    </label>
+                                    <label><?php esc_html_e( 'İkon (emoji)', 'smart-assistant' ); ?><br>
+                                        <input type="text" name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][icon]"
+                                               value="<?php echo esc_attr( $tool['icon'] ); ?>" class="sa-tf-icon" />
+                                    </label>
+                                    <label><?php esc_html_e( 'Başlık', 'smart-assistant' ); ?><br>
+                                        <input type="text" name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][label]"
+                                               value="<?php echo esc_attr( $tool['label'] ); ?>" class="large-text sa-tf-label" />
+                                    </label>
+                                    <label><?php esc_html_e( 'Açıklama', 'smart-assistant' ); ?><br>
+                                        <input type="text" name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][description]"
+                                               value="<?php echo esc_attr( $tool['description'] ); ?>" class="large-text sa-tf-desc" />
+                                    </label>
+                                    <label style="grid-column:1/-1"><?php esc_html_e( 'Karşılama Mesajı', 'smart-assistant' ); ?><br>
+                                        <textarea name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][welcome_msg]"
+                                                  rows="2" class="large-text sa-tf-welcome"><?php echo esc_textarea( $tool['welcome_msg'] ); ?></textarea>
+                                    </label>
+                                    <label style="grid-column:1/-1"><?php esc_html_e( 'Sistem Prompt\'u', 'smart-assistant' ); ?><br>
+                                        <textarea name="smart_assistant_options[tools][<?php echo esc_attr( $tool_idx ); ?>][system_prompt]"
+                                                  rows="6" class="large-text sa-tf-prompt"><?php echo esc_textarea( $tool['system_prompt'] ); ?></textarea>
+                                    </label>
+                                </div>
+                                <button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-collapse" style="margin-top:10px">
+                                    <?php esc_html_e( '↑ Kapat', 'smart-assistant' ); ?>
+                                </button>
+                            </div>
+                        </div>
+                    <?php $tool_idx++; endforeach; ?>
+                    </div>
+                    <div class="sa-tools-actions">
+                        <button type="button" id="sa-add-tool" class="sa-btn sa-btn-secondary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                            <?php esc_html_e( 'Yeni Test Ekle', 'smart-assistant' ); ?>
+                        </button>
+                        <button type="button" id="sa-reset-tools" class="sa-btn sa-btn-ghost">
+                            <?php esc_html_e( 'Varsayılanlara Sıfırla', 'smart-assistant' ); ?>
+                        </button>
+                    </div>
+                    <script>window.saToolsNextIdx = <?php echo intval( $tool_idx ); ?>;</script>
                 </div>
             </section>
 
