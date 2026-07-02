@@ -195,6 +195,103 @@
     } );
 
     /* ============================================================
+       Tools management (Testler bölümü — ekle / düzenle / sil)
+       ============================================================ */
+    $( function () {
+        const $list = $( '#sa-tools-list' );
+        if ( ! $list.length ) return;
+
+        // Toggle edit form.
+        $list.on( 'click', '.sa-tool-toggle', function () {
+            const $row = $( this ).closest( '.sa-tool-row' );
+            $row.find( '.sa-tool-row-summary' ).hide();
+            $row.find( '.sa-tool-edit-fields' ).prop( 'hidden', false );
+        } );
+
+        // Collapse edit form.
+        $list.on( 'click', '.sa-tool-collapse', function () {
+            const $row = $( this ).closest( '.sa-tool-row' );
+            updateRowSummary( $row );
+            $row.find( '.sa-tool-edit-fields' ).prop( 'hidden', true );
+            $row.find( '.sa-tool-row-summary' ).show();
+        } );
+
+        // Live-update summary while editing.
+        $list.on( 'input change', '.sa-tf-label, .sa-tf-icon, .sa-tf-key, .sa-tf-desc', function () {
+            updateRowSummary( $( this ).closest( '.sa-tool-row' ) );
+        } );
+
+        function updateRowSummary( $row ) {
+            $row.find( '.sa-tool-preview-icon' ).text( $row.find( '.sa-tf-icon' ).val() || '🤖' );
+            $row.find( '.sa-tool-preview-label' ).text( $row.find( '.sa-tf-label' ).val() || '(Başlıksız)' );
+            $row.find( '.sa-tool-preview-key' ).text( $row.find( '.sa-tf-key' ).val() || '...' );
+            $row.find( '.sa-tool-preview-desc' ).text( $row.find( '.sa-tf-desc' ).val() || '' );
+        }
+
+        // Delete row.
+        $list.on( 'click', '.sa-tool-delete', function () {
+            if ( ! window.confirm( 'Bu testi silmek istediğinize emin misiniz?' ) ) return;
+            $( this ).closest( '.sa-tool-row' ).remove();
+        } );
+
+        // Add new tool.
+        $( '#sa-add-tool' ).on( 'click', function () {
+            const idx = ( window.saToolsNextIdx = ( window.saToolsNextIdx || 0 ) + 1 );
+            const $row = $( saToolRowHtml( idx ) );
+            $list.append( $row );
+            $row.find( '.sa-tool-row-summary' ).hide();
+            $row.find( '.sa-tool-edit-fields' ).prop( 'hidden', false );
+            $row[0].scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
+        } );
+
+        // Reset to defaults (clears all rows; next save restores defaults from PHP).
+        $( '#sa-reset-tools' ).on( 'click', function () {
+            if ( ! window.confirm( 'Tüm testler varsayılanlara sıfırlanacak. Şimdi kaydettiğinizde varsayılanlar geri yüklenecek. Devam etmek istiyor musunuz?' ) ) return;
+            $list.empty();
+        } );
+
+        function saToolRowHtml( idx ) {
+            return '<div class="sa-tool-row" data-index="' + idx + '">' +
+                '<div class="sa-tool-row-summary">' +
+                    '<span class="sa-tool-row-icon sa-tool-preview-icon">🤖</span>' +
+                    '<div class="sa-tool-row-info">' +
+                        '<strong class="sa-tool-preview-label">(Yeni Test)</strong>' +
+                        '<code class="sa-tool-preview-key">...</code>' +
+                        '<span class="sa-tool-preview-desc"></span>' +
+                    '</div>' +
+                    '<div class="sa-tool-row-btns">' +
+                        '<button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-toggle">Düzenle</button>' +
+                        '<button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-delete" style="color:var(--sa-red-500)">Sil</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="sa-tool-edit-fields" hidden>' +
+                    '<div class="sa-tool-fields-grid">' +
+                        '<label>Anahtar (key)<br>' +
+                            '<input type="text" name="smart_assistant_options[tools][' + idx + '][key]" value="" class="regular-text sa-tf-key" placeholder="örn. kalori_hesapla" />' +
+                        '</label>' +
+                        '<label>İkon (emoji)<br>' +
+                            '<input type="text" name="smart_assistant_options[tools][' + idx + '][icon]" value="🤖" class="sa-tf-icon" />' +
+                        '</label>' +
+                        '<label>Başlık<br>' +
+                            '<input type="text" name="smart_assistant_options[tools][' + idx + '][label]" value="" class="large-text sa-tf-label" placeholder="Hesaplayıcı adı" />' +
+                        '</label>' +
+                        '<label>Açıklama<br>' +
+                            '<input type="text" name="smart_assistant_options[tools][' + idx + '][description]" value="" class="large-text sa-tf-desc" placeholder="Kısa açıklama" />' +
+                        '</label>' +
+                        '<label style="grid-column:1/-1">Karşılama Mesajı<br>' +
+                            '<textarea name="smart_assistant_options[tools][' + idx + '][welcome_msg]" rows="2" class="large-text sa-tf-welcome" placeholder="Test başladığında gösterilecek mesaj"></textarea>' +
+                        '</label>' +
+                        '<label style="grid-column:1/-1">Sistem Prompt\'u<br>' +
+                            '<textarea name="smart_assistant_options[tools][' + idx + '][system_prompt]" rows="5" class="large-text sa-tf-prompt" placeholder="AI\'ya verilecek talimatlar..."></textarea>' +
+                        '</label>' +
+                    '</div>' +
+                    '<button type="button" class="sa-btn sa-btn-ghost sa-btn-sm sa-tool-collapse" style="margin-top:10px">↑ Kapat</button>' +
+                '</div>' +
+            '</div>';
+        }
+    } );
+
+    /* ============================================================
        Datalist'e preset modelleri yükle (sayfa yüklendiğinde).
        ============================================================ */
     $( function () {

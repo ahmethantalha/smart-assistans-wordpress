@@ -636,6 +636,105 @@
 }
 .sa-muted { color: var(--sa-slate-500); font-size: 12.5px; }
 
+/* =========================== Tools Management (Testler) =========================== */
+.sa-tool-row {
+    border: 1px solid var(--sa-slate-200);
+    border-radius: var(--sa-radius);
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+.sa-tool-row:hover {
+    box-shadow: var(--sa-shadow-sm);
+}
+.sa-tool-row-summary {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 14px;
+    background: var(--sa-slate-50);
+    cursor: default;
+}
+.sa-tool-row-icon {
+    font-size: 1.5em;
+    flex-shrink: 0;
+    width: 2em;
+    text-align: center;
+    line-height: 1;
+}
+.sa-tool-row-info {
+    flex: 1;
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+.sa-tool-row-info strong {
+    font-size: 0.875rem;
+    color: var(--sa-slate-800);
+    white-space: nowrap;
+}
+.sa-tool-row-info code {
+    font-size: 0.72rem;
+    background: var(--sa-slate-200);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--sa-indigo-600);
+    white-space: nowrap;
+}
+.sa-tool-row-info span {
+    font-size: 0.8rem;
+    color: var(--sa-slate-500);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+.sa-tool-row-btns {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.sa-tool-edit-fields {
+    padding: 16px;
+    border-top: 1px solid var(--sa-slate-200);
+    background: #fff;
+}
+.sa-tool-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+.sa-tool-fields-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.83rem;
+    font-weight: 600;
+    color: var(--sa-slate-700);
+}
+.sa-tf-icon {
+    width: 3.2em !important;
+    font-size: 1.3em;
+    text-align: center;
+    padding: 3px 6px !important;
+}
+.sa-tools-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+.sa-btn-sm {
+    padding: 4px 10px !important;
+    font-size: 0.78rem !important;
+    height: auto !important;
+    line-height: 1.5 !important;
+    min-height: unset !important;
+}
+
 /* =========================== Responsive =========================== */
 @media (max-width: 960px) {
     .sa-app {

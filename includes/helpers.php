@@ -271,16 +271,12 @@ function smart_assistant_current_supports_fab() {
 }
 
 /**
- * Widget'taki "Testler" panelinde gösterilen interaktif hesaplayıcı tanımları.
+ * Varsayılan araç tanımları. Yönetici panelinden özelleştirilebilir.
  *
- * Her aracın system_prompt'u, AI'a soruları sırayla sordurup formülü kendi
- * hesaplamasını söyler — ek backend hesaplama kodu gerekmez. system_prompt
- * frontend'e ASLA gönderilmez (bkz. Frontend::get_tools_for_js()); sadece
- * 'tool' key'i REST isteğinde gidip gelir, AIClient sunucu tarafında prompt'u
- * eşleştirir.
+ * @return array<string, array>
  */
-function smart_assistant_get_tools() {
-    $tools = [
+function smart_assistant_get_default_tools() {
+    return [
         'tdee' => [
             'label'         => __( 'Kalori & TDEE', 'smart-assistant' ),
             'description'   => __( 'Günlük enerji ihtiyacını hesapla', 'smart-assistant' ),
@@ -303,9 +299,43 @@ function smart_assistant_get_tools() {
             'system_prompt' => 'Sen bir BMI (Beden Kitle İndeksi) hesaplayıcısısın. Kullanıcıyla Türkçe konuş. Sırayla sor — HER SEFERİNDE YALNIZCA BİR SORU: boy (cm), kilo (kg). BMI = kilo ÷ (boy/100)². Sonucu ve kategorisini belirt: Zayıf (<18.5), Normal (18.5-24.9), Fazla kilolu (25-29.9), Obez I (30-34.9), Obez II (≥35). BMI\'nin genel bir gösterge olduğunu, kas kütlesi yoğun kişilerde yanıltıcı olabileceğini kısaca belirt. Ardından kullanıcının ek sorularına yanıt ver. Site içeriğine başvurma, sadece bu hesaplamayı yap.',
         ],
     ];
+}
 
-    /**
-     * Site sahiplerinin kendi araçlarını ekleyebilmesi / mevcutları değiştirebilmesi için.
-     */
-    return apply_filters( 'smart_assistant_tools', $tools );
+/**
+ * Widget'taki "Testler" panelinde gösterilen interaktif hesaplayıcı tanımları.
+ *
+ * Önce veritabanındaki özel araçlara bakar; yoksa varsayılanları döndürür.
+ * system_prompt frontend'e ASLA gönderilmez; yalnızca 'tool' key'i REST isteğinde
+ * gidip gelir, AIClient sunucu tarafında eşleştirir.
+ *
+ * @return array<string, array>
+ */
+function smart_assistant_get_tools() {
+    $opts     = smart_assistant_get_options();
+    $db_tools = $opts['tools'] ?? [];
+
+    if ( ! empty( $db_tools ) && is_array( $db_tools ) ) {
+        $tools = [];
+        foreach ( $db_tools as $t ) {
+            if ( ! is_array( $t ) ) {
+                continue;
+            }
+            $key = sanitize_key( $t['key'] ?? '' );
+            if ( '' === $key ) {
+                continue;
+            }
+            $tools[ $key ] = [
+                'label'         => $t['label'] ?? '',
+                'description'   => $t['description'] ?? '',
+                'icon'          => $t['icon'] ?? '🤖',
+                'welcome_msg'   => $t['welcome_msg'] ?? '',
+                'system_prompt' => $t['system_prompt'] ?? '',
+            ];
+        }
+        if ( ! empty( $tools ) ) {
+            return apply_filters( 'smart_assistant_tools', $tools );
+        }
+    }
+
+    return apply_filters( 'smart_assistant_tools', smart_assistant_get_default_tools() );
 }
