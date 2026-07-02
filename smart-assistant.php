@@ -3,7 +3,7 @@
  * Plugin Name:       Smart Assistant
  * Plugin URI:        https://github.com/ahmethantalha/smart-assistans-wordpress
  * Description:       AI destekli site asistanı — MiniMax API ile sitenizin içeriklerinden hareketle cevap verir. Sağ alt köşede chatbot widget ve makale özetleme butonu. Mod 1: yerleşik WP araması. Mod 2: Open Notebook (MCP) entegrasyonu.
- * Version:           1.0.2
+ * Version:           1.0.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Ahmethan T. Gültekin
@@ -21,7 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // === Sabitler ===
-define( 'SMART_ASSISTANT_VERSION', '1.0.2' );
+define( 'SMART_ASSISTANT_VERSION', '1.0.3' );
 define( 'SMART_ASSISTANT_FILE', __FILE__ );
 define( 'SMART_ASSISTANT_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SMART_ASSISTANT_URL', plugin_dir_url( __FILE__ ) );
