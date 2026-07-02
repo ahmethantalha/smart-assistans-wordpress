@@ -1,0 +1,62 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  release:
+    name: Build & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version from plugin header
+        id: ver
+        run: |
+          VERSION=$(grep -oP '(?<=\* Version:\s{0,20})\d+\.\d+\.\d+' smart-assistant.php | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=smart-assistant-$VERSION.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Check if release already exists
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          STATUS=$(gh release view "${{ steps.ver.outputs.tag }}" 2>&1 && echo "exists" || echo "missing")
+          echo "exists=$([[ $STATUS == *exists* ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Build plugin zip
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          mkdir -p build/smart-assistant
+          cp -r . build/smart-assistant/
+          # Geliştirme dosyalarını temizle
+          rm -rf build/smart-assistant/.git
+          rm -rf build/smart-assistant/.github
+          rm -rf build/smart-assistant/.claude
+          rm -rf build/smart-assistant/tests
+          rm -rf build/smart-assistant/vendor
+          rm -rf build/smart-assistant/node_modules
+          rm -f  build/smart-assistant/composer.json
+          rm -f  build/smart-assistant/composer.lock
+          rm -f  build/smart-assistant/phpunit.xml
+          rm -f  build/smart-assistant/phpcs.xml
+          rm -f  build/smart-assistant/phpstan.neon
+          cd build && zip -r "../${{ steps.ver.outputs.zip }}" smart-assistant/ -x "*.DS_Store"
+          echo "Zip size: $(du -h ../${{ steps.ver.outputs.zip }} | cut -f1)"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.ver.outputs.tag }}" \
+            "${{ steps.ver.outputs.zip }}" \
+            --title "${{ steps.ver.outputs.tag }}" \
+            --generate-notes
