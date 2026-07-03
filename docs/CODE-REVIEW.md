@@ -17,6 +17,11 @@ Buna karşın incelemede şunlar bulundu:
 
 Her bulgu dosya/satır referansı ve önerilen düzeltmeyle listelenmiştir. Sonda önceliklendirilmiş gelişim planı var.
 
+> **Güncelleme (2026-07-03):** Aşağıdaki bulgular bu dalda düzeltildi:
+> **G1, G2, G3, G4, G5** (tüm güvenlik) ve **M1, M2, M3, M4** (mantık hataları).
+> Açık kalan: **M5** (MiniMax model kimlikleri dış doğrulama gerektiriyor) ve
+> Faz 3/4 iyileştirmeleri.
+
 ---
 
 ## 2. Güvenlik Açıkları

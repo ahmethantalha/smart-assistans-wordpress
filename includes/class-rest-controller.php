@@ -144,7 +144,7 @@ class RestController {
         }
 
         $opts    = smart_assistant_get_options();
-        $message = sanitize_text_field( $request->get_param( 'message' ) );
+        $message = mb_substr( sanitize_text_field( $request->get_param( 'message' ) ), 0, self::MAX_MESSAGE_CHARS );
         $history = $this->normalize_history( $request->get_param( 'history' ) );
         $post_id = absint( $request->get_param( 'post_id' ) );
         $tool    = sanitize_key( (string) $request->get_param( 'tool' ) );
@@ -218,7 +218,7 @@ class RestController {
 
         $opts    = smart_assistant_get_options();
         $post_id = absint( $request->get_param( 'post_id' ) );
-        $message = sanitize_text_field( $request->get_param( 'message' ) );
+        $message = mb_substr( sanitize_text_field( $request->get_param( 'message' ) ), 0, self::MAX_MESSAGE_CHARS );
         $history = $this->normalize_history( $request->get_param( 'history' ) );
 
         if ( ! $post_id ) {
@@ -352,7 +352,7 @@ class RestController {
         if ( is_string( $hdr ) && '' !== $hdr ) {
             return $hdr;
         }
-        // 3. Authorization: Bearer veya doğrudan.
+        // 3. Authorization: "Nonce <değer>" şeması.
         $auth = $request->get_header( 'authorization' );
         if ( is_string( $auth ) && 0 === stripos( $auth, 'nonce ' ) ) {
             return trim( substr( $auth, 6 ) );
@@ -361,17 +361,28 @@ class RestController {
     }
 
     private function check_rate_limit( $ip ) {
-        $opts = smart_assistant_get_options();
-        $key  = smart_assistant_rate_limit_key( $ip );
-        $now  = time();
+        $opts   = smart_assistant_get_options();
+        $key    = smart_assistant_rate_limit_key( $ip );
         $window = 60;
-        $max  = (int) $opts['rate_limit_per_min'];
+        $max    = (int) $opts['rate_limit_per_min'];
 
-        $data = get_transient( $key );
-        if ( false === $data ) {
-            $data = [ 'count' => 0, 'reset_at' => $now + $window ];
+        // Kalıcı object cache varsa: atomik increment ile race condition'ı önle.
+        // Aksi halde transient tabanlı sayaç fallback'i (tek sunucuda yeterli).
+        if ( wp_using_ext_object_cache() ) {
+            $group = 'smart_assistant_rl';
+            // add() yalnızca anahtar yoksa yazar; TTL'i tek noktada belirler.
+            wp_cache_add( $key, 0, $group, $window );
+            $count = wp_cache_incr( $key, 1, $group );
+            if ( false === $count ) {
+                // incr başarısızsa (nadiren) engelleme, isteği geçir.
+                return true;
+            }
+            return $count <= $max;
         }
-        if ( $now > $data['reset_at'] ) {
+
+        $now  = time();
+        $data = get_transient( $key );
+        if ( false === $data || ! is_array( $data ) || $now > ( $data['reset_at'] ?? 0 ) ) {
             $data = [ 'count' => 0, 'reset_at' => $now + $window ];
         }
 
@@ -387,6 +398,11 @@ class RestController {
         return sanitize_text_field( $ip );
     }
 
+    /**
+     * Mesaj başına izin verilen maksimum karakter (token/maliyet istismarını sınırlar).
+     */
+    const MAX_MESSAGE_CHARS = 4000;
+
     private function normalize_history( $history ) {
         $out = [];
         if ( ! is_array( $history ) ) {
@@ -398,10 +414,13 @@ class RestController {
             if ( ! is_array( $m ) || empty( $m['role'] ) || empty( $m['content'] ) ) {
                 continue;
             }
-            $role = in_array( $m['role'], [ 'user', 'assistant', 'system' ], true ) ? $m['role'] : 'user';
+            // GÜVENLİK: İstemci ASLA 'system' rolü gönderemez. Aksi halde sunucunun
+            // kimlik/kural prompt'unu ezip endpoint'i serbest bir LLM proxy'sine
+            // çevirebilir (bkz. AIClient::chat — messages[0] system ise default eklenmez).
+            $role = in_array( $m['role'], [ 'user', 'assistant' ], true ) ? $m['role'] : 'user';
             $out[] = [
                 'role'    => $role,
-                'content' => sanitize_textarea_field( $m['content'] ),
+                'content' => mb_substr( sanitize_textarea_field( $m['content'] ), 0, self::MAX_MESSAGE_CHARS ),
             ];
         }
         return $out;

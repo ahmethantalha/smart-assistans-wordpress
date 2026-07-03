@@ -124,15 +124,9 @@ class Abilities {
             return new \WP_Error( 'empty_query', 'Sorgu boş olamaz' );
         }
 
-        $opts         = smart_assistant_get_options();
-        $orig_max     = $opts['max_results'];
-        $opts['max_results'] = $limit;
-        update_option( 'smart_assistant_options', $opts );
-
-        $results = \SmartAssistant\Plugin::instance()->search->search( $query );
-
-        $opts['max_results'] = $orig_max;
-        update_option( 'smart_assistant_options', $opts );
+        // Limit'i doğrudan parametre olarak geçir; global option'a DOKUNMA
+        // (eşzamanlı isteklerde option'ı bozar + gereksiz DB yazımı yapardı).
+        $results = \SmartAssistant\Plugin::instance()->search->search( $query, 0, $limit );
 
         return [ 'results' => $results ];
     }

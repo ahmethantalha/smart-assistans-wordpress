@@ -175,14 +175,17 @@ function smart_assistant_get_options() {
     ];
     $opts = get_option( 'smart_assistant_options', [] );
 
-    // === Migration: Eski kullanıcılara page desteği otomatik ekle. ===
-    // Kullanıcı bilinçli olarak kaldırmışsa tekrar eklemeyiz.
-    if ( ! empty( $opts ) && ! empty( $opts['post_types'] ) && is_array( $opts['post_types'] )
-         && ! in_array( 'page', $opts['post_types'], true )
-         && post_type_exists( 'page' )
-         && ! get_option( 'smart_assistant_page_skipped', false ) ) {
-        $opts['post_types'][] = 'page';
-        update_option( 'smart_assistant_options', $opts );
+    // === Migration: Eski kullanıcılara page desteğini TEK SEFER ekle. ===
+    // Bir kez çalışır ve bayrağı yazar; böylece kullanıcı 'page'i sonradan
+    // kaldırdığında migration onu geri eklemez ve her istekte DB'ye yazmaz.
+    if ( ! empty( $opts ) && ! get_option( 'smart_assistant_page_migrated', false ) ) {
+        if ( ! empty( $opts['post_types'] ) && is_array( $opts['post_types'] )
+             && ! in_array( 'page', $opts['post_types'], true )
+             && post_type_exists( 'page' ) ) {
+            $opts['post_types'][] = 'page';
+            update_option( 'smart_assistant_options', $opts );
+        }
+        update_option( 'smart_assistant_page_migrated', 1 );
     }
 
     // === Migration: Eski kullanıcılarda kırık URL varsa otomatik düzelt. ===
