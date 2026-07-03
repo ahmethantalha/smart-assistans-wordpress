@@ -191,8 +191,13 @@ class Settings {
         $out['ai_examples']    = sanitize_textarea_field( $input['ai_examples'] ?? '' );
         $out['show_signature'] = ! empty( $input['show_signature'] );
 
-        // Testler (hesaplayıcılar): formdan tools_submitted=1 gelirse işle.
-        if ( ! empty( $input['tools_submitted'] ) ) {
+        // Testler (hesaplayıcılar):
+        //  - tools_reset=1  → 'tools' anahtarını kaldır ki varsayılanlar geri yüklensin.
+        //  - tools_submitted=1 → gönderilen listeyi (BOŞ bile olsa) kalıcı kaydet;
+        //    böylece kullanıcı bir testi sildiğinde yenilemede geri gelmez.
+        if ( ! empty( $input['tools_reset'] ) ) {
+            unset( $out['tools'] );
+        } elseif ( ! empty( $input['tools_submitted'] ) ) {
             $raw_tools       = is_array( $input['tools'] ?? null ) ? $input['tools'] : [];
             $sanitized_tools = [];
             $seen_keys       = [];

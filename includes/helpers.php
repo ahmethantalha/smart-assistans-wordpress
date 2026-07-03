@@ -432,31 +432,32 @@ function smart_assistant_get_default_tools() {
  * @return array<string, array>
  */
 function smart_assistant_get_tools() {
-    $opts     = smart_assistant_get_options();
-    $db_tools = $opts['tools'] ?? [];
+    $opts = smart_assistant_get_options();
 
-    if ( ! empty( $db_tools ) && is_array( $db_tools ) ) {
-        $tools = [];
-        foreach ( $db_tools as $t ) {
-            if ( ! is_array( $t ) ) {
-                continue;
-            }
-            $key = sanitize_key( $t['key'] ?? '' );
-            if ( '' === $key ) {
-                continue;
-            }
-            $tools[ $key ] = [
-                'label'         => $t['label'] ?? '',
-                'description'   => $t['description'] ?? '',
-                'icon'          => $t['icon'] ?? '🤖',
-                'welcome_msg'   => $t['welcome_msg'] ?? '',
-                'system_prompt' => $t['system_prompt'] ?? '',
-            ];
-        }
-        if ( ! empty( $tools ) ) {
-            return apply_filters( 'smart_assistant_tools', $tools );
-        }
+    // 'tools' anahtarı HİÇ yoksa kullanıcı henüz yapılandırmamıştır → varsayılanlar.
+    // Anahtar varsa (boş bir dizi bile olsa) kullanıcının seçimine SAYGI göster;
+    // böylece tüm testleri silip kaydeden kullanıcıya varsayılanlar geri gelmez.
+    if ( ! isset( $opts['tools'] ) || ! is_array( $opts['tools'] ) ) {
+        return apply_filters( 'smart_assistant_tools', smart_assistant_get_default_tools() );
     }
 
-    return apply_filters( 'smart_assistant_tools', smart_assistant_get_default_tools() );
+    $tools = [];
+    foreach ( $opts['tools'] as $t ) {
+        if ( ! is_array( $t ) ) {
+            continue;
+        }
+        $key = sanitize_key( $t['key'] ?? '' );
+        if ( '' === $key ) {
+            continue;
+        }
+        $tools[ $key ] = [
+            'label'         => $t['label'] ?? '',
+            'description'   => $t['description'] ?? '',
+            'icon'          => $t['icon'] ?? '🤖',
+            'welcome_msg'   => $t['welcome_msg'] ?? '',
+            'system_prompt' => $t['system_prompt'] ?? '',
+        ];
+    }
+
+    return apply_filters( 'smart_assistant_tools', $tools );
 }
