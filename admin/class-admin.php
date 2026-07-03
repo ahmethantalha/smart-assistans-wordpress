@@ -38,15 +38,18 @@ class Admin {
             true
         );
         // JS'e REST URL + nonce + i18n aktar.
+        $i18n = [
+            'saved'        => __( '✓ Ayarlar kaydedildi', 'smart-assistant' ),
+            'testing'      => __( 'Test ediliyor...', 'smart-assistant' ),
+            'testSuccess'  => __( '✓ Bağlantı başarılı', 'smart-assistant' ),
+        ];
         wp_localize_script( 'smart-assistant-admin', 'SmartAssistantAdmin', [
             'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1/test' ) ),
             'nonce'    => wp_create_nonce( 'wp_rest' ),
-            'i18n'     => [
-                'saved'        => __( '✓ Ayarlar kaydedildi', 'smart-assistant' ),
-                'testing'      => __( 'Test ediliyor...', 'smart-assistant' ),
-                'testSuccess'  => __( '✓ Bağlantı başarılı', 'smart-assistant' ),
-            ],
+            'i18n'     => $i18n,
         ] );
+        // admin.js `window.SmartAssistantI18n` global'ini bekliyor — onu da tanımla.
+        wp_localize_script( 'smart-assistant-admin', 'SmartAssistantI18n', $i18n );
         // Provider preset'lerini JS'e aktar.
         if ( function_exists( 'smart_assistant_get_provider_presets' ) ) {
             wp_localize_script( 'smart-assistant-admin', 'SmartAssistantPresets', smart_assistant_get_provider_presets() );

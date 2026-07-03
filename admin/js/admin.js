@@ -236,6 +236,9 @@
 
         // Add new tool.
         $( '#sa-add-tool' ).on( 'click', function () {
+            // Sıfırlama sonrası elle test eklenirse reset niyetini iptal et
+            // (aksi halde kaydetme yine varsayılanlara döndürürdü).
+            $( '#sa-tools-reset' ).val( '0' );
             const idx = ( window.saToolsNextIdx = ( window.saToolsNextIdx || 0 ) + 1 );
             const $row = $( saToolRowHtml( idx ) );
             $list.append( $row );
@@ -244,9 +247,12 @@
             $row[0].scrollIntoView( { behavior: 'smooth', block: 'nearest' } );
         } );
 
-        // Reset to defaults (clears all rows; next save restores defaults from PHP).
+        // Reset to defaults: tools_reset=1 sinyaliyle PHP tarafında 'tools' anahtarı
+        // kaldırılır ve varsayılanlar geri yüklenir. (Boş liste artık "hiç test yok"
+        // anlamına geldiği için sıfırlama ayrı bir sinyalle yapılır.)
         $( '#sa-reset-tools' ).on( 'click', function () {
             if ( ! window.confirm( 'Tüm testler varsayılanlara sıfırlanacak. Şimdi kaydettiğinizde varsayılanlar geri yüklenecek. Devam etmek istiyor musunuz?' ) ) return;
+            $( '#sa-tools-reset' ).val( '1' );
             $list.empty();
         } );
 

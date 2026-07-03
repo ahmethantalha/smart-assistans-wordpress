@@ -21,8 +21,9 @@ class Search {
      * @param int    $post_id    Belirli bir post'a bağlıysa (FAB özetleme).
      * @return array [{id, title, url, excerpt, content}, ...]
      */
-    public function search( $query, $post_id = 0 ) {
+    public function search( $query, $post_id = 0, $limit = 0 ) {
         $opts = smart_assistant_get_options();
+        $max  = $limit > 0 ? (int) $limit : (int) $opts['max_results'];
 
         // Belirli bir post bağlamında çalışıyorsak (FAB özetleme)
         if ( $post_id > 0 ) {
@@ -41,7 +42,7 @@ class Search {
         // Türkçe için özel relevance scoring: başlık eşleşmesi 3 puan, içerik 1 puan.
         // MySQL FULLTEXT Türkçe stem yapmaz, bu yüzden daha güvenilir.
         if ( mb_strlen( $query ) >= 3 ) {
-            $results = $this->relevance_search( $query, $post_types );
+            $results = $this->relevance_search( $query, $post_types, $max );
             if ( ! empty( $results ) ) {
                 return $this->diversify_results( $results );
             }
@@ -51,7 +52,8 @@ class Search {
         $args = [
             'post_type'      => $post_types,
             'post_status'    => 'publish',
-            'posts_per_page' => (int) $opts['max_results'],
+            'has_password'   => false, // Parola korumalı içeriği hariç tut (sızıntı önlemi).
+            'posts_per_page' => $max,
             'no_found_rows'  => true,
             'orderby'        => 'relevance',
             'order'          => 'DESC',
@@ -70,7 +72,7 @@ class Search {
 
         // Eğer hiç sonuç yoksa, eski fallback LIKE denemesi.
         if ( empty( $results ) && mb_strlen( $query ) >= 3 ) {
-            $results = $this->fallback_like_search( $query );
+            $results = $this->fallback_like_search( $query, $max );
         }
 
         return $this->diversify_results( $results );
@@ -100,10 +102,17 @@ class Search {
      */
     private function is_post_readable( $post ) {
         $status = isset( $post->post_status ) ? $post->post_status : '';
+        $id     = isset( $post->ID ) ? (int) $post->ID : 0;
+
+        // Parola korumalı içerik: yalnızca yazıyı düzenleme yetkisi olanlara açık.
+        // (Public endpoint'lerden parolasız sızmasını engeller.)
+        if ( ! empty( $post->post_password ) ) {
+            return $id > 0 && current_user_can( 'edit_post', $id );
+        }
+
         if ( 'publish' === $status ) {
             return true;
         }
-        $id = isset( $post->ID ) ? (int) $post->ID : 0;
         return $id > 0 && current_user_can( 'read_post', $id );
     }
 
@@ -160,10 +169,11 @@ class Search {
      * Sorgu önce stop word'lerden arındırılır ("vücut yağ oranımı hesaplamak istiyorum" -> "vücut yağ oranı hesapla").
      * Tüm kelimeler AND ile aranır, böylece "daha az ama doğru" sonuç gelir.
      */
-    private function relevance_search( $query, $post_types ) {
+    private function relevance_search( $query, $post_types, $max = 0 ) {
         global $wpdb;
 
         $opts = smart_assistant_get_options();
+        $max  = $max > 0 ? (int) $max : (int) $opts['max_results'];
 
         // Türkçe stop word temizliği.
         $stop_words = [
@@ -237,12 +247,13 @@ class Search {
 
         $score_expr  = implode( ' + ', $score_parts );
         $where_expr  = implode( ' OR ', $where_parts );  // OR: en az 1 kelime eşleşmesi yeterli
-        $params[]    = (int) $opts['max_results'];
+        $params[]    = $max;
 
         $sql = "SELECT ID, post_title, post_content, post_excerpt,
                        ($score_expr) AS relevance_score
                 FROM {$wpdb->posts}
                 WHERE post_status = 'publish'
+                  AND post_password = ''
                   AND post_type IN ($pt_in)
                   AND $where_expr
                 ORDER BY relevance_score DESC, post_date DESC
@@ -342,9 +353,10 @@ class Search {
         return $diversified;
     }
 
-    private function fallback_like_search( $query ) {
+    private function fallback_like_search( $query, $max = 0 ) {
         global $wpdb;
         $opts    = smart_assistant_get_options();
+        $max     = $max > 0 ? (int) $max : (int) $opts['max_results'];
         $post_types = ! empty( $opts['post_types'] )
             ? (array) $opts['post_types']
             : get_post_types( [ 'public' => true ] );
@@ -393,11 +405,11 @@ class Search {
         $title_priority = empty( $words ) ? '%' . $wpdb->esc_like( $query ) . '%' : '%' . $wpdb->esc_like( $words[0] ) . '%';
         $sql    = $wpdb->prepare(
             "SELECT ID, post_title, post_content, post_excerpt FROM {$wpdb->posts}
-             WHERE post_status = 'publish' AND post_type IN ($pt_in)
+             WHERE post_status = 'publish' AND post_password = '' AND post_type IN ($pt_in)
              AND $where
              ORDER BY CASE WHEN post_title LIKE %s THEN 0 ELSE 1 END, post_date DESC
              LIMIT %d",
-            array_merge( $params, [ $title_priority, (int) $opts['max_results'] ] )
+            array_merge( $params, [ $title_priority, $max ] )
         );
 
         $rows = $wpdb->get_results( $sql );

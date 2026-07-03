@@ -64,7 +64,7 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'mode', __( 'Mod', 'smart-assistant' ), 'render_mode_field' );
+        $this->add_field( 'mode', __( 'Mod', 'smart-assistant' ), 'render_mode_field', 'smart_assistant_mode' );
 
         add_settings_section(
             'smart_assistant_general',
@@ -93,9 +93,9 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'post_types', __( 'İçerik Kaynakları (Post Type)', 'smart-assistant' ), 'render_post_types_field' );
-        $this->add_field( 'max_results', __( 'Maksimum Sonuç', 'smart-assistant' ), 'render_max_results_field' );
-        $this->add_field( 'max_content_chars', __( 'Yazı Başına Max Karakter', 'smart-assistant' ), 'render_max_content_chars_field' );
+        $this->add_field( 'post_types', __( 'İçerik Kaynakları (Post Type)', 'smart-assistant' ), 'render_post_types_field', 'smart_assistant_content' );
+        $this->add_field( 'max_results', __( 'Maksimum Sonuç', 'smart-assistant' ), 'render_max_results_field', 'smart_assistant_content' );
+        $this->add_field( 'max_content_chars', __( 'Yazı Başına Max Karakter', 'smart-assistant' ), 'render_max_content_chars_field', 'smart_assistant_content' );
 
         add_settings_section(
             'smart_assistant_advanced',
@@ -106,13 +106,13 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'open_notebook_url', __( 'Open Notebook URL (Mod 2)', 'smart-assistant' ), 'render_open_notebook_url_field' );
-        $this->add_field( 'open_notebook_notebook_id', __( 'Open Notebook Notebook ID', 'smart-assistant' ), 'render_open_notebook_notebook_id_field' );
-        $this->add_field( 'on_strategy_model', __( 'ON Strateji Modeli', 'smart-assistant' ), 'render_on_strategy_model_field' );
-        $this->add_field( 'on_answer_model', __( 'ON Cevap Modeli', 'smart-assistant' ), 'render_on_answer_model_field' );
-        $this->add_field( 'on_final_answer_model', __( 'ON Final Cevap Modeli', 'smart-assistant' ), 'render_on_final_answer_model_field' );
-        $this->add_field( 'rate_limit_per_min', __( 'Dakikada Max İstek', 'smart-assistant' ), 'render_rate_limit_field' );
-        $this->add_field( 'enable_abilities', __( 'Abilities API Aktif', 'smart-assistant' ), 'render_abilities_field' );
+        $this->add_field( 'open_notebook_url', __( 'Open Notebook URL (Mod 2)', 'smart-assistant' ), 'render_open_notebook_url_field', 'smart_assistant_advanced' );
+        $this->add_field( 'open_notebook_notebook_id', __( 'Open Notebook Notebook ID', 'smart-assistant' ), 'render_open_notebook_notebook_id_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_strategy_model', __( 'ON Strateji Modeli', 'smart-assistant' ), 'render_on_strategy_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_answer_model', __( 'ON Cevap Modeli', 'smart-assistant' ), 'render_on_answer_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_final_answer_model', __( 'ON Final Cevap Modeli', 'smart-assistant' ), 'render_on_final_answer_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'rate_limit_per_min', __( 'Dakikada Max İstek', 'smart-assistant' ), 'render_rate_limit_field', 'smart_assistant_advanced' );
+        $this->add_field( 'enable_abilities', __( 'Abilities API Aktif', 'smart-assistant' ), 'render_abilities_field', 'smart_assistant_advanced' );
 
         // AI Kimliği bölümü.
         add_settings_section(
@@ -123,20 +123,44 @@ class Settings {
             },
             'smart-assistant'
         );
-        $this->add_field( 'ai_name', __( 'AI Adı', 'smart-assistant' ), 'render_ai_name_field' );
-        $this->add_field( 'ai_tone', __( 'Ton', 'smart-assistant' ), 'render_ai_tone_field' );
-        $this->add_field( 'ai_greeting', __( 'Selamlama Mesajı', 'smart-assistant' ), 'render_ai_greeting_field' );
-        $this->add_field( 'ai_examples', __( 'Few-shot Örnekler', 'smart-assistant' ), 'render_ai_examples_field' );
-        $this->add_field( 'show_signature', __( 'Cevap Sonuna İmza', 'smart-assistant' ), 'render_show_signature_field' );
+        $this->add_field( 'ai_name', __( 'AI Adı', 'smart-assistant' ), 'render_ai_name_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_tone', __( 'Ton', 'smart-assistant' ), 'render_ai_tone_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_greeting', __( 'Selamlama Mesajı', 'smart-assistant' ), 'render_ai_greeting_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_examples', __( 'Few-shot Örnekler', 'smart-assistant' ), 'render_ai_examples_field', 'smart_assistant_identity' );
+        $this->add_field( 'show_signature', __( 'Cevap Sonuna İmza', 'smart-assistant' ), 'render_show_signature_field', 'smart_assistant_identity' );
+
+        // Görünüm & Davranış bölümü (Faz A).
+        add_settings_section(
+            'smart_assistant_appearance',
+            __( 'Görünüm & Davranış', 'smart-assistant' ),
+            function () {
+                echo '<p>' . esc_html__( 'Widget rengi, konumu, ikonu ve davranış tercihleri.', 'smart-assistant' ) . '</p>';
+            },
+            'smart-assistant'
+        );
+        $this->add_field( 'appearance_color', __( 'Ana Renk', 'smart-assistant' ), 'render_appearance_color_field', 'smart_assistant_appearance' );
+        $this->add_field( 'appearance_position', __( 'Widget Konumu', 'smart-assistant' ), 'render_appearance_position_field', 'smart_assistant_appearance' );
+        $this->add_field( 'appearance_icon', __( 'Balon İkonu', 'smart-assistant' ), 'render_appearance_icon_field', 'smart_assistant_appearance' );
+        $this->add_field( 'welcome_delay', __( 'Karşılama Balonu Gecikmesi', 'smart-assistant' ), 'render_welcome_delay_field', 'smart_assistant_appearance' );
+        $this->add_field( 'persist_chat', __( 'Sohbeti Hatırla', 'smart-assistant' ), 'render_persist_chat_field', 'smart_assistant_appearance' );
+        $this->add_field( 'enable_streaming', __( 'Akan Yanıt (Streaming)', 'smart-assistant' ), 'render_streaming_field', 'smart_assistant_appearance' );
+        $this->add_field( 'enable_feedback', __( 'Geri Bildirim Butonları', 'smart-assistant' ), 'render_feedback_field', 'smart_assistant_appearance' );
     }
 
-    private function add_field( $id, $title, $callback, $args = [] ) {
+    /**
+     * @param string $id       Alan anahtarı.
+     * @param string $title    Etiket.
+     * @param string $callback Render metodu.
+     * @param string $section  Kayıt olunacak section (varsayılan: general).
+     * @param array  $args     Ek argümanlar.
+     */
+    private function add_field( $id, $title, $callback, $section = 'smart_assistant_general', $args = [] ) {
         add_settings_field(
             'smart_assistant_' . $id,
             $title,
             [ $this, $callback ],
             'smart-assistant',
-            'smart_assistant_general',
+            $section,
             array_merge( [ 'key' => $id ], $args )
         );
     }
@@ -183,6 +207,20 @@ class Settings {
         $out['rate_limit_per_min'] = max( 1, min( 200, intval( $input['rate_limit_per_min'] ?? 20 ) ) );
         $out['enable_abilities']   = ! empty( $input['enable_abilities'] );
 
+        // Görünüm & davranış.
+        $color = sanitize_hex_color( $input['appearance_color'] ?? '' );
+        $out['appearance_color']    = $color ?: '';
+        $out['appearance_position'] = in_array( $input['appearance_position'] ?? 'right', [ 'right', 'left' ], true )
+            ? $input['appearance_position'] : 'right';
+        $out['appearance_icon']     = mb_substr( sanitize_text_field( $input['appearance_icon'] ?? '💬' ), 0, 8 );
+        if ( '' === $out['appearance_icon'] ) {
+            $out['appearance_icon'] = '💬';
+        }
+        $out['welcome_delay']    = max( 0, min( 60, intval( $input['welcome_delay'] ?? 2 ) ) );
+        $out['persist_chat']     = ! empty( $input['persist_chat'] );
+        $out['enable_streaming'] = ! empty( $input['enable_streaming'] );
+        $out['enable_feedback']  = ! empty( $input['enable_feedback'] );
+
         // AI Kimliği.
         $out['ai_name']        = sanitize_text_field( $input['ai_name'] ?? '' );
         $out['ai_tone']        = in_array( $input['ai_tone'] ?? 'friendly', [ 'friendly', 'professional', 'expert' ], true )
@@ -191,21 +229,35 @@ class Settings {
         $out['ai_examples']    = sanitize_textarea_field( $input['ai_examples'] ?? '' );
         $out['show_signature'] = ! empty( $input['show_signature'] );
 
-        // Testler (hesaplayıcılar): formdan tools_submitted=1 gelirse işle.
-        if ( ! empty( $input['tools_submitted'] ) ) {
+        // Testler (hesaplayıcılar):
+        //  - tools_reset=1  → 'tools' anahtarını kaldır ki varsayılanlar geri yüklensin.
+        //  - tools_submitted=1 → gönderilen listeyi (BOŞ bile olsa) kalıcı kaydet;
+        //    böylece kullanıcı bir testi sildiğinde yenilemede geri gelmez.
+        if ( ! empty( $input['tools_reset'] ) ) {
+            unset( $out['tools'] );
+        } elseif ( ! empty( $input['tools_submitted'] ) ) {
             $raw_tools       = is_array( $input['tools'] ?? null ) ? $input['tools'] : [];
             $sanitized_tools = [];
+            $seen_keys       = [];
             foreach ( $raw_tools as $t ) {
                 if ( ! is_array( $t ) ) {
                     continue;
                 }
-                $key = sanitize_key( $t['key'] ?? '' );
-                if ( '' === $key ) {
+                $key   = sanitize_key( $t['key'] ?? '' );
+                $label = sanitize_text_field( $t['label'] ?? '' );
+                // Key boşsa başlıktan otomatik türet (kullanıcı yeni test eklerken
+                // key girmeyi unutursa satır sessizce kaybolmasın).
+                if ( '' === $key && '' !== $label ) {
+                    $key = sanitize_key( sanitize_title( $label ) );
+                }
+                // Hâlâ boşsa ya da bu key daha önce kullanıldıysa atla (çakışma önlemi).
+                if ( '' === $key || isset( $seen_keys[ $key ] ) ) {
                     continue;
                 }
+                $seen_keys[ $key ] = true;
                 $sanitized_tools[] = [
                     'key'           => $key,
-                    'label'         => sanitize_text_field( $t['label'] ?? '' ),
+                    'label'         => $label,
                     'icon'          => sanitize_text_field( $t['icon'] ?? '🤖' ),
                     'description'   => sanitize_text_field( $t['description'] ?? '' ),
                     'welcome_msg'   => sanitize_textarea_field( $t['welcome_msg'] ?? '' ),
@@ -574,6 +626,81 @@ class Settings {
             <input type="checkbox" name="smart_assistant_options[show_signature]" value="1"
                 <?php checked( $opts['show_signature'] ); ?> />
             <?php esc_html_e( 'Her cevabın sonuna "— AI Adı" imzası eklensin', 'smart-assistant' ); ?>
+        </label>
+        <?php
+    }
+
+    // === Görünüm & Davranış field render'ları ===
+
+    public function render_appearance_color_field() {
+        $opts  = smart_assistant_get_options();
+        $value = $opts['appearance_color'] ?: '#0f172a';
+        ?>
+        <input type="color" name="smart_assistant_options[appearance_color]"
+               value="<?php echo esc_attr( $value ); ?>" />
+        <p class="description">
+            <?php esc_html_e( 'Balon, panel başlığı ve butonların ana rengi. Varsayılan: koyu lacivert (#0f172a).', 'smart-assistant' ); ?>
+        </p>
+        <?php
+    }
+
+    public function render_appearance_position_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <select name="smart_assistant_options[appearance_position]">
+            <option value="right" <?php selected( $opts['appearance_position'], 'right' ); ?>><?php esc_html_e( 'Sağ alt (varsayılan)', 'smart-assistant' ); ?></option>
+            <option value="left" <?php selected( $opts['appearance_position'], 'left' ); ?>><?php esc_html_e( 'Sol alt', 'smart-assistant' ); ?></option>
+        </select>
+        <?php
+    }
+
+    public function render_appearance_icon_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <input type="text" name="smart_assistant_options[appearance_icon]"
+               value="<?php echo esc_attr( $opts['appearance_icon'] ); ?>" style="width:70px" maxlength="8" />
+        <p class="description"><?php esc_html_e( 'Launcher balonunda gösterilen emoji (örn. 💬, 🤖, ✨).', 'smart-assistant' ); ?></p>
+        <?php
+    }
+
+    public function render_welcome_delay_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <input type="number" min="0" max="60" name="smart_assistant_options[welcome_delay]"
+               value="<?php echo esc_attr( $opts['welcome_delay'] ); ?>" /> <?php esc_html_e( 'saniye', 'smart-assistant' ); ?>
+        <p class="description"><?php esc_html_e( 'Sayfa açıldıktan kaç saniye sonra tanıtım balonu görünsün. 0 = balon gösterilmesin.', 'smart-assistant' ); ?></p>
+        <?php
+    }
+
+    public function render_persist_chat_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <label>
+            <input type="checkbox" name="smart_assistant_options[persist_chat]" value="1"
+                <?php checked( $opts['persist_chat'] ); ?> />
+            <?php esc_html_e( 'Sohbet, sekme açık kaldığı sürece sayfalar arasında korunsun (sessionStorage)', 'smart-assistant' ); ?>
+        </label>
+        <?php
+    }
+
+    public function render_streaming_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <label>
+            <input type="checkbox" name="smart_assistant_options[enable_streaming]" value="1"
+                <?php checked( $opts['enable_streaming'] ); ?> />
+            <?php esc_html_e( 'Yanıtlar kelime kelime akarak gelsin (desteklenmeyen sunucularda otomatik normal moda düşer)', 'smart-assistant' ); ?>
+        </label>
+        <?php
+    }
+
+    public function render_feedback_field() {
+        $opts = smart_assistant_get_options();
+        ?>
+        <label>
+            <input type="checkbox" name="smart_assistant_options[enable_feedback]" value="1"
+                <?php checked( $opts['enable_feedback'] ); ?> />
+            <?php esc_html_e( 'AI cevaplarının altında 👍/👎 geri bildirim butonları gösterilsin', 'smart-assistant' ); ?>
         </label>
         <?php
     }

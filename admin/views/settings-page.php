@@ -60,6 +60,10 @@ $sections = [
                 <span class="sa-nav-icon" aria-hidden="true">🎭</span>
                 <?php esc_html_e( 'AI Kimliği', 'smart-assistant' ); ?>
             </a>
+            <a href="#section-appearance" class="sa-nav-link" data-target="section-appearance">
+                <span class="sa-nav-icon" aria-hidden="true">🎨</span>
+                <?php esc_html_e( 'Görünüm', 'smart-assistant' ); ?>
+            </a>
             <a href="#section-advanced" class="sa-nav-link" data-target="section-advanced">
                 <span class="sa-nav-icon" aria-hidden="true">⚙️</span>
                 <?php esc_html_e( 'Gelişmiş', 'smart-assistant' ); ?>
@@ -170,6 +174,19 @@ $sections = [
                 </div>
             </section>
 
+            <section id="section-appearance" class="sa-card" data-section="appearance">
+                <div class="sa-card-head">
+                    <div>
+                        <h2 class="sa-card-title"><?php esc_html_e( 'Görünüm & Davranış', 'smart-assistant' ); ?></h2>
+                        <p class="sa-card-sub"><?php esc_html_e( 'Widget rengi, konumu, ikonu; sohbet kalıcılığı, streaming ve geri bildirim.', 'smart-assistant' ); ?></p>
+                    </div>
+                    <span class="sa-badge sa-badge-info"><?php esc_html_e( 'Yeni', 'smart-assistant' ); ?></span>
+                </div>
+                <div class="sa-card-body">
+                    <?php smart_assistant_render_section( 'smart_assistant_appearance' ); ?>
+                </div>
+            </section>
+
             <section id="section-advanced" class="sa-card" data-section="advanced">
                 <div class="sa-card-head">
                     <div>
@@ -196,6 +213,7 @@ $sections = [
                 </div>
                 <div class="sa-card-body">
                     <input type="hidden" name="smart_assistant_options[tools_submitted]" value="1" />
+                    <input type="hidden" id="sa-tools-reset" name="smart_assistant_options[tools_reset]" value="0" />
                     <div id="sa-tools-list">
                     <?php foreach ( $current_tools as $tool_key => $tool ) : ?>
                         <div class="sa-tool-row" data-index="<?php echo esc_attr( $tool_idx ); ?>">
@@ -250,6 +268,10 @@ $sections = [
                         <button type="button" id="sa-add-tool" class="sa-btn sa-btn-secondary">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                             <?php esc_html_e( 'Yeni Test Ekle', 'smart-assistant' ); ?>
+                        </button>
+                        <button type="submit" class="sa-btn sa-btn-primary">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <?php esc_html_e( 'Testleri Kaydet', 'smart-assistant' ); ?>
                         </button>
                         <button type="button" id="sa-reset-tools" class="sa-btn sa-btn-ghost">
                             <?php esc_html_e( 'Varsayılanlara Sıfırla', 'smart-assistant' ); ?>
@@ -333,6 +355,31 @@ $sections = [
                         <li><?php esc_html_e( 'Mini sohbetten "Genişlet" diyerek sağdaki sütuna geçebilirsiniz.', 'smart-assistant' ); ?></li>
                         <li><?php esc_html_e( 'Sohbetler hiçbir yerde saklanmaz; cache temizlendiğinde veya "Sil" dediğinizde sıfırlanır.', 'smart-assistant' ); ?></li>
                     </ul>
+                </div>
+                <div class="sa-info-block">
+                    <h4><?php esc_html_e( 'Geri Bildirim', 'smart-assistant' ); ?></h4>
+                    <?php
+                    $sa_fb = get_option( 'smart_assistant_feedback', [] );
+                    $sa_up   = (int) ( $sa_fb['up'] ?? 0 );
+                    $sa_down = (int) ( $sa_fb['down'] ?? 0 );
+                    ?>
+                    <p>
+                        👍 <strong><?php echo esc_html( $sa_up ); ?></strong> &nbsp;·&nbsp;
+                        👎 <strong><?php echo esc_html( $sa_down ); ?></strong>
+                    </p>
+                    <?php if ( ! empty( $sa_fb['recent_down'] ) && is_array( $sa_fb['recent_down'] ) ) : ?>
+                        <p class="sa-muted"><?php esc_html_e( 'Son beğenilmeyen cevaplar (içerik açığı ipuçları):', 'smart-assistant' ); ?></p>
+                        <ul>
+                            <?php foreach ( array_slice( $sa_fb['recent_down'], 0, 5 ) as $sa_item ) : ?>
+                                <li class="sa-muted">“<?php echo esc_html( mb_substr( $sa_item['msg'] ?? '', 0, 90 ) ); ?>…”</li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+                <div class="sa-info-block">
+                    <h4><?php esc_html_e( 'Sayfa İçi Sohbet', 'smart-assistant' ); ?></h4>
+                    <p><?php esc_html_e( 'Chatbot\'u herhangi bir sayfaya gömmek için shortcode kullanın veya blok düzenleyicide "Smart Assistant Sohbet" bloğunu ekleyin:', 'smart-assistant' ); ?></p>
+                    <ul class="sa-code-list"><li><code>[smart_assistant]</code></li></ul>
                 </div>
                 <div class="sa-info-block">
                     <h4><?php esc_html_e( 'Abilities API (WordPress 7.0)', 'smart-assistant' ); ?></h4>

@@ -11,6 +11,7 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 // Options temizle.
 delete_option( 'smart_assistant_options' );
+delete_option( 'smart_assistant_page_migrated' );
 
 // Rate limit transient'leri (önek ile).
 global $wpdb;

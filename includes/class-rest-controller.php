@@ -59,6 +59,33 @@ class RestController {
                     'required' => true,
                     'type'     => 'string',
                 ],
+                'stream'  => [
+                    'required' => false,
+                    'type'     => 'boolean',
+                    'default'  => false,
+                ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE_V1, '/feedback', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_feedback' ],
+            'permission_callback' => '__return_true', // Nonce + rate limit preflight'ta.
+            'args'                => [
+                'rating'  => [
+                    'required' => true,
+                    'type'     => 'string',
+                    'enum'     => [ 'up', 'down' ],
+                ],
+                'message' => [
+                    'required' => false,
+                    'type'     => 'string',
+                    'default'  => '',
+                ],
+                'nonce'   => [
+                    'required' => true,
+                    'type'     => 'string',
+                ],
             ],
         ] );
 
@@ -144,10 +171,19 @@ class RestController {
         }
 
         $opts    = smart_assistant_get_options();
-        $message = sanitize_text_field( $request->get_param( 'message' ) );
+        $message = mb_substr( sanitize_text_field( $request->get_param( 'message' ) ), 0, self::MAX_MESSAGE_CHARS );
         $history = $this->normalize_history( $request->get_param( 'history' ) );
         $post_id = absint( $request->get_param( 'post_id' ) );
         $tool    = sanitize_key( (string) $request->get_param( 'tool' ) );
+        $stream  = (bool) $request->get_param( 'stream' );
+
+        // Olası prompt-injection denemesini izleme amacıyla logla (bloklama yok).
+        if ( smart_assistant_looks_like_injection( $message ) ) {
+            smart_assistant_log(
+                'Olası prompt injection denemesi (IP: ' . $this->get_client_ip() . '): ' . mb_substr( $message, 0, 200 ),
+                'warning'
+            );
+        }
         $tools   = smart_assistant_get_tools();
         if ( '' !== $tool && ! isset( $tools[ $tool ] ) ) {
             $tool = '';
@@ -174,6 +210,17 @@ class RestController {
                 if ( $ai_client && method_exists( $ai_client, 'strip_broken_links' ) ) {
                     $cleaned = $ai_client->strip_broken_links( $cleaned );
                 }
+                if ( $stream ) {
+                    // ON streaming desteklemiyor; SSE kanalından tek parça dön.
+                    $this->sse_start();
+                    $this->sse_send( [
+                        'type'    => 'done',
+                        'reply'   => $cleaned,
+                        'sources' => $on_resp['sources'],
+                        'model'   => 'open_notebook',
+                    ] );
+                    exit;
+                }
                 return rest_ensure_response( [
                     'reply'   => $cleaned,
                     'sources' => $on_resp['sources'],
@@ -189,11 +236,18 @@ class RestController {
         $messages   = $history;
         $messages[] = [ 'role' => 'user', 'content' => $message ];
 
-        $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, [
+        $ctx = [
             'sources' => $sources,
             'mode'    => 'simple',
             'tool'    => $tool,
-        ] );
+        ];
+
+        if ( $stream ) {
+            $this->stream_chat_response( $messages, $ctx, $sources );
+            // stream_chat_response exit ile biter; buraya dönülmez.
+        }
+
+        $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, $ctx );
 
         if ( is_wp_error( $ai_resp ) ) {
             return $this->error_response( $ai_resp );
@@ -208,6 +262,122 @@ class RestController {
     }
 
     /**
+     * /feedback endpoint'i — AI cevabına 👍/👎.
+     * Toplam sayaçlar + son olumsuz mesajlar (içerik açığı analizi için) saklanır.
+     */
+    public function handle_feedback( \WP_REST_Request $request ) {
+        $check = $this->preflight( $request );
+        if ( is_wp_error( $check ) ) {
+            return $check;
+        }
+
+        $rating  = $request->get_param( 'rating' );
+        $excerpt = mb_substr( sanitize_text_field( (string) $request->get_param( 'message' ) ), 0, 300 );
+
+        if ( ! in_array( $rating, [ 'up', 'down' ], true ) ) {
+            return $this->error_response( new \WP_Error( 'bad_rating', __( 'Geçersiz değerlendirme.', 'smart-assistant' ) ) );
+        }
+
+        $stats = get_option( 'smart_assistant_feedback', false );
+        if ( ! is_array( $stats ) ) {
+            $stats = [ 'up' => 0, 'down' => 0, 'recent_down' => [] ];
+            add_option( 'smart_assistant_feedback', $stats, '', 'no' ); // autoload kapalı.
+        }
+
+        $stats[ $rating ] = (int) ( $stats[ $rating ] ?? 0 ) + 1;
+        if ( 'down' === $rating && '' !== $excerpt ) {
+            $recent = is_array( $stats['recent_down'] ?? null ) ? $stats['recent_down'] : [];
+            array_unshift( $recent, [ 'msg' => $excerpt, 'time' => time() ] );
+            $stats['recent_down'] = array_slice( $recent, 0, 50 );
+        }
+        update_option( 'smart_assistant_feedback', $stats, false );
+
+        return rest_ensure_response( [ 'ok' => true ] );
+    }
+
+    // =========================================================================
+    // SSE (streaming) yardımcıları
+    // =========================================================================
+
+    /**
+     * Streaming chat cevabını SSE olarak gönderir ve isteği bitirir.
+     */
+    private function stream_chat_response( $messages, $ctx, $sources ) {
+        $this->sse_start();
+
+        $ai   = \SmartAssistant\Plugin::instance()->ai_client;
+        $emit = $this->make_stream_emitter( $ai );
+        $resp = $ai->chat_stream( $messages, $ctx, $emit );
+
+        // Streaming altyapısı yoksa aynı SSE kanalından tek parça dön.
+        if ( is_wp_error( $resp ) && 'stream_unsupported' === $resp->get_error_code() ) {
+            $resp = $ai->chat( $messages, $ctx );
+        }
+
+        if ( is_wp_error( $resp ) ) {
+            $this->sse_send( [ 'type' => 'error', 'message' => $resp->get_error_message() ] );
+        } else {
+            $this->sse_send( [
+                'type'    => 'done',
+                'reply'   => $resp['content'],
+                'sources' => $sources,
+                'model'   => $resp['model'],
+            ] );
+        }
+        exit;
+    }
+
+    /**
+     * Holdback'li delta emitter'ı üretir.
+     *
+     * GÜVENLİK: Son N karakteri elde tutarak akan metne redaksiyon uygular —
+     * e-posta/token gibi kalıplar chunk sınırında bölünse bile ekrana sızmadan
+     * maskelenir. Nihai (otoritatif) metin 'done' event'iyle ayrıca gönderilir.
+     */
+    private function make_stream_emitter( $ai ) {
+        $acc     = '';
+        $emitted = 0;
+        $hold    = 80; // Redaksiyon kalıplarının tipik max uzunluğundan büyük.
+
+        return function ( $delta ) use ( &$acc, &$emitted, $hold, $ai ) {
+            $acc .= $delta;
+            $safe = $ai->safe_stream_prefix( $acc );
+            if ( function_exists( 'smart_assistant_redact_output' ) ) {
+                $safe = smart_assistant_redact_output( $safe );
+            }
+            $ready = mb_strlen( $safe ) - $hold;
+            if ( $ready > $emitted ) {
+                $this->sse_send( [ 'type' => 'delta', 'text' => mb_substr( $safe, $emitted, $ready - $emitted ) ] );
+                $emitted = $ready;
+            }
+        };
+    }
+
+    /**
+     * SSE başlıklarını gönder, output buffering'i kapat.
+     */
+    private function sse_start() {
+        if ( ! headers_sent() ) {
+            header( 'Content-Type: text/event-stream; charset=utf-8' );
+            header( 'Cache-Control: no-cache' );
+            header( 'X-Accel-Buffering: no' ); // nginx buffering kapat.
+        }
+        while ( ob_get_level() > 0 ) {
+            @ob_end_flush(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
+    }
+
+    /**
+     * Tek bir SSE event'i yaz ve flush'la.
+     */
+    private function sse_send( $data ) {
+        echo 'data: ' . wp_json_encode( $data ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON SSE çıktısı.
+        if ( function_exists( 'flush' ) ) {
+            @flush(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
+    }
+
+    /**
      * /summarize endpoint'i — FAB özetleme butonu için.
      */
     public function handle_summarize( \WP_REST_Request $request ) {
@@ -218,7 +388,7 @@ class RestController {
 
         $opts    = smart_assistant_get_options();
         $post_id = absint( $request->get_param( 'post_id' ) );
-        $message = sanitize_text_field( $request->get_param( 'message' ) );
+        $message = mb_substr( sanitize_text_field( $request->get_param( 'message' ) ), 0, self::MAX_MESSAGE_CHARS );
         $history = $this->normalize_history( $request->get_param( 'history' ) );
 
         if ( ! $post_id ) {
@@ -352,7 +522,7 @@ class RestController {
         if ( is_string( $hdr ) && '' !== $hdr ) {
             return $hdr;
         }
-        // 3. Authorization: Bearer veya doğrudan.
+        // 3. Authorization: "Nonce <değer>" şeması.
         $auth = $request->get_header( 'authorization' );
         if ( is_string( $auth ) && 0 === stripos( $auth, 'nonce ' ) ) {
             return trim( substr( $auth, 6 ) );
@@ -361,17 +531,28 @@ class RestController {
     }
 
     private function check_rate_limit( $ip ) {
-        $opts = smart_assistant_get_options();
-        $key  = smart_assistant_rate_limit_key( $ip );
-        $now  = time();
+        $opts   = smart_assistant_get_options();
+        $key    = smart_assistant_rate_limit_key( $ip );
         $window = 60;
-        $max  = (int) $opts['rate_limit_per_min'];
+        $max    = (int) $opts['rate_limit_per_min'];
 
-        $data = get_transient( $key );
-        if ( false === $data ) {
-            $data = [ 'count' => 0, 'reset_at' => $now + $window ];
+        // Kalıcı object cache varsa: atomik increment ile race condition'ı önle.
+        // Aksi halde transient tabanlı sayaç fallback'i (tek sunucuda yeterli).
+        if ( wp_using_ext_object_cache() ) {
+            $group = 'smart_assistant_rl';
+            // add() yalnızca anahtar yoksa yazar; TTL'i tek noktada belirler.
+            wp_cache_add( $key, 0, $group, $window );
+            $count = wp_cache_incr( $key, 1, $group );
+            if ( false === $count ) {
+                // incr başarısızsa (nadiren) engelleme, isteği geçir.
+                return true;
+            }
+            return $count <= $max;
         }
-        if ( $now > $data['reset_at'] ) {
+
+        $now  = time();
+        $data = get_transient( $key );
+        if ( false === $data || ! is_array( $data ) || $now > ( $data['reset_at'] ?? 0 ) ) {
             $data = [ 'count' => 0, 'reset_at' => $now + $window ];
         }
 
@@ -387,6 +568,11 @@ class RestController {
         return sanitize_text_field( $ip );
     }
 
+    /**
+     * Mesaj başına izin verilen maksimum karakter (token/maliyet istismarını sınırlar).
+     */
+    const MAX_MESSAGE_CHARS = 4000;
+
     private function normalize_history( $history ) {
         $out = [];
         if ( ! is_array( $history ) ) {
@@ -398,10 +584,13 @@ class RestController {
             if ( ! is_array( $m ) || empty( $m['role'] ) || empty( $m['content'] ) ) {
                 continue;
             }
-            $role = in_array( $m['role'], [ 'user', 'assistant', 'system' ], true ) ? $m['role'] : 'user';
+            // GÜVENLİK: İstemci ASLA 'system' rolü gönderemez. Aksi halde sunucunun
+            // kimlik/kural prompt'unu ezip endpoint'i serbest bir LLM proxy'sine
+            // çevirebilir (bkz. AIClient::chat — messages[0] system ise default eklenmez).
+            $role = in_array( $m['role'], [ 'user', 'assistant' ], true ) ? $m['role'] : 'user';
             $out[] = [
                 'role'    => $role,
-                'content' => sanitize_textarea_field( $m['content'] ),
+                'content' => mb_substr( sanitize_textarea_field( $m['content'] ), 0, self::MAX_MESSAGE_CHARS ),
             ];
         }
         return $out;

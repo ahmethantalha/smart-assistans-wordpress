@@ -90,6 +90,10 @@ class OpenNotebook {
             if ( $ai_client && method_exists( $ai_client, 'strip_broken_links' ) ) {
                 $content = $ai_client->strip_broken_links( $content );
             }
+            // GÜVENLİK: ON yolu chat()'ten geçmediği için hassas veri redaksiyonunu burada uygula.
+            if ( function_exists( 'smart_assistant_redact_output' ) ) {
+                $content = smart_assistant_redact_output( $content );
+            }
         }
 
         $raw_sources = $this->extract_sources( $data );
