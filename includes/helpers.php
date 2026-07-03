@@ -172,6 +172,14 @@ function smart_assistant_get_options() {
         'ai_tone'         => 'friendly',   // 'friendly' | 'professional' | 'expert'
         'ai_examples'     => '',           // Few-shot örnekler (textarea, her satır "S: ...| C: ...").
         'show_signature'  => false,        // Cevap sonuna "— [AI_NAME]" imzası.
+        // Görünüm & davranış (Faz A).
+        'appearance_color'    => '',       // Boş = varsayılan koyu tema. Hex renk (örn. #4f46e5).
+        'appearance_position' => 'right',  // Widget konumu: 'right' | 'left'.
+        'appearance_icon'     => '💬',     // Launcher balonundaki emoji.
+        'welcome_delay'       => 2,        // Karşılama balonu gecikmesi (sn). 0 = balon kapalı.
+        'persist_chat'        => true,     // Sohbeti sekme boyunca hatırla (sessionStorage).
+        'enable_streaming'    => true,     // Yanıtları kelime kelime akıt (SSE).
+        'enable_feedback'     => true,     // AI mesajlarında 👍/👎 butonları.
     ];
     $opts = get_option( 'smart_assistant_options', [] );
 

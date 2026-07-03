@@ -43,16 +43,16 @@ Sektörde 2026 itibarıyla standart sayılan ve bizde olmayanlar:
 
 Sıralama ölçütü: **kullanıcı etkisi ÷ efor**. Her faz kendi başına yayınlanabilir bir sürüm.
 
-### Faz A — Temel Deneyim (v1.1) · ~1-2 hafta efor
+### Faz A — Temel Deneyim (v1.1) · ✅ TAMAMLANDI (2026-07-03)
 Hedef: widget'ı sektör standardı hissiyatına getirmek.
 
-| # | Özellik | Detay | Efor |
+| # | Özellik | Detay | Durum |
 |---|---|---|---|
-| A1 | **Streaming yanıt (SSE)** | `stream: true` + `fetch` ReadableStream ile kelime kelime yazım. En büyük algılanan-hız kazanımı. Provider başına parser gerekir. | Orta |
-| A2 | **Sohbet kalıcılığı** | `sessionStorage` ile sekme ömrü boyunca sohbeti koru (sayfa geçişinde kaybolmasın). Ayarlardan açma/kapama. | Düşük |
-| A3 | **Geri bildirim** | Her AI mesajına 👍/👎; sonuç `wp_options`'ta sayaç veya (A7 ile) tabloda. | Düşük |
-| A4 | **Görünüm özelleştirme** | Ana renk, balon pozisyonu (sağ/sol), avatar/emoji, açılış gecikmesi. CSS custom properties zaten uygun. | Düşük |
-| A5 | **Shortcode + Gutenberg block** | `[smart_assistant]` ile sayfa içine gömülü chat (widget'a alternatif). | Düşük |
+| A1 | **Streaming yanıt (SSE)** | `stream: true` + `fetch` ReadableStream ile kelime kelime yazım. 3 provider (OpenAI-uyumlu, Anthropic, Gemini) SSE parser'ı; holdback'li akış redaksiyonu (PII akışa sızmaz); desteklenmeyen ortamda otomatik normal moda düşme. | ✅ |
+| A2 | **Sohbet kalıcılığı** | `sessionStorage` ile sekme ömrü boyunca sohbet + geçmiş + aktif araç + açık/kapalı durumu korunur. Ayarlardan kapatılabilir. | ✅ |
+| A3 | **Geri bildirim** | Her AI mesajına 👍/👎; `/feedback` endpoint'i (nonce + rate limit); sayaçlar + son 50 olumsuz mesaj (içerik açığı analizi için) saklanır; admin Bilgi kartında özet. | ✅ |
+| A4 | **Görünüm özelleştirme** | Ana renk (CSS custom properties), balon pozisyonu (sağ/sol), launcher emoji'si, karşılama balonu gecikmesi (0=kapalı). Ayrıca settings alanlarının tümünün tek section'a kaydolması bug'ı düzeltildi. | ✅ |
+| A5 | **Shortcode + Gutenberg block** | `[smart_assistant]` shortcode'u + "Smart Assistant Sohbet" dynamic block'u; panel sayfa içine gömülü modda açılır. | ✅ |
 
 ### Faz B — Site Sahibi Değeri (v1.2) · ~2-3 hafta efor
 Hedef: botu "maliyet kalemi"nden "değer üreten araç"a çevirmek.

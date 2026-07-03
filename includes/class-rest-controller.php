@@ -59,6 +59,33 @@ class RestController {
                     'required' => true,
                     'type'     => 'string',
                 ],
+                'stream'  => [
+                    'required' => false,
+                    'type'     => 'boolean',
+                    'default'  => false,
+                ],
+            ],
+        ] );
+
+        register_rest_route( self::NAMESPACE_V1, '/feedback', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_feedback' ],
+            'permission_callback' => '__return_true', // Nonce + rate limit preflight'ta.
+            'args'                => [
+                'rating'  => [
+                    'required' => true,
+                    'type'     => 'string',
+                    'enum'     => [ 'up', 'down' ],
+                ],
+                'message' => [
+                    'required' => false,
+                    'type'     => 'string',
+                    'default'  => '',
+                ],
+                'nonce'   => [
+                    'required' => true,
+                    'type'     => 'string',
+                ],
             ],
         ] );
 
@@ -148,6 +175,7 @@ class RestController {
         $history = $this->normalize_history( $request->get_param( 'history' ) );
         $post_id = absint( $request->get_param( 'post_id' ) );
         $tool    = sanitize_key( (string) $request->get_param( 'tool' ) );
+        $stream  = (bool) $request->get_param( 'stream' );
 
         // Olası prompt-injection denemesini izleme amacıyla logla (bloklama yok).
         if ( smart_assistant_looks_like_injection( $message ) ) {
@@ -182,6 +210,17 @@ class RestController {
                 if ( $ai_client && method_exists( $ai_client, 'strip_broken_links' ) ) {
                     $cleaned = $ai_client->strip_broken_links( $cleaned );
                 }
+                if ( $stream ) {
+                    // ON streaming desteklemiyor; SSE kanalından tek parça dön.
+                    $this->sse_start();
+                    $this->sse_send( [
+                        'type'    => 'done',
+                        'reply'   => $cleaned,
+                        'sources' => $on_resp['sources'],
+                        'model'   => 'open_notebook',
+                    ] );
+                    exit;
+                }
                 return rest_ensure_response( [
                     'reply'   => $cleaned,
                     'sources' => $on_resp['sources'],
@@ -197,11 +236,18 @@ class RestController {
         $messages   = $history;
         $messages[] = [ 'role' => 'user', 'content' => $message ];
 
-        $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, [
+        $ctx = [
             'sources' => $sources,
             'mode'    => 'simple',
             'tool'    => $tool,
-        ] );
+        ];
+
+        if ( $stream ) {
+            $this->stream_chat_response( $messages, $ctx, $sources );
+            // stream_chat_response exit ile biter; buraya dönülmez.
+        }
+
+        $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, $ctx );
 
         if ( is_wp_error( $ai_resp ) ) {
             return $this->error_response( $ai_resp );
@@ -213,6 +259,122 @@ class RestController {
             'model'   => $ai_resp['model'],
             'usage'   => $ai_resp['usage'],
         ] );
+    }
+
+    /**
+     * /feedback endpoint'i — AI cevabına 👍/👎.
+     * Toplam sayaçlar + son olumsuz mesajlar (içerik açığı analizi için) saklanır.
+     */
+    public function handle_feedback( \WP_REST_Request $request ) {
+        $check = $this->preflight( $request );
+        if ( is_wp_error( $check ) ) {
+            return $check;
+        }
+
+        $rating  = $request->get_param( 'rating' );
+        $excerpt = mb_substr( sanitize_text_field( (string) $request->get_param( 'message' ) ), 0, 300 );
+
+        if ( ! in_array( $rating, [ 'up', 'down' ], true ) ) {
+            return $this->error_response( new \WP_Error( 'bad_rating', __( 'Geçersiz değerlendirme.', 'smart-assistant' ) ) );
+        }
+
+        $stats = get_option( 'smart_assistant_feedback', false );
+        if ( ! is_array( $stats ) ) {
+            $stats = [ 'up' => 0, 'down' => 0, 'recent_down' => [] ];
+            add_option( 'smart_assistant_feedback', $stats, '', 'no' ); // autoload kapalı.
+        }
+
+        $stats[ $rating ] = (int) ( $stats[ $rating ] ?? 0 ) + 1;
+        if ( 'down' === $rating && '' !== $excerpt ) {
+            $recent = is_array( $stats['recent_down'] ?? null ) ? $stats['recent_down'] : [];
+            array_unshift( $recent, [ 'msg' => $excerpt, 'time' => time() ] );
+            $stats['recent_down'] = array_slice( $recent, 0, 50 );
+        }
+        update_option( 'smart_assistant_feedback', $stats, false );
+
+        return rest_ensure_response( [ 'ok' => true ] );
+    }
+
+    // =========================================================================
+    // SSE (streaming) yardımcıları
+    // =========================================================================
+
+    /**
+     * Streaming chat cevabını SSE olarak gönderir ve isteği bitirir.
+     */
+    private function stream_chat_response( $messages, $ctx, $sources ) {
+        $this->sse_start();
+
+        $ai   = \SmartAssistant\Plugin::instance()->ai_client;
+        $emit = $this->make_stream_emitter( $ai );
+        $resp = $ai->chat_stream( $messages, $ctx, $emit );
+
+        // Streaming altyapısı yoksa aynı SSE kanalından tek parça dön.
+        if ( is_wp_error( $resp ) && 'stream_unsupported' === $resp->get_error_code() ) {
+            $resp = $ai->chat( $messages, $ctx );
+        }
+
+        if ( is_wp_error( $resp ) ) {
+            $this->sse_send( [ 'type' => 'error', 'message' => $resp->get_error_message() ] );
+        } else {
+            $this->sse_send( [
+                'type'    => 'done',
+                'reply'   => $resp['content'],
+                'sources' => $sources,
+                'model'   => $resp['model'],
+            ] );
+        }
+        exit;
+    }
+
+    /**
+     * Holdback'li delta emitter'ı üretir.
+     *
+     * GÜVENLİK: Son N karakteri elde tutarak akan metne redaksiyon uygular —
+     * e-posta/token gibi kalıplar chunk sınırında bölünse bile ekrana sızmadan
+     * maskelenir. Nihai (otoritatif) metin 'done' event'iyle ayrıca gönderilir.
+     */
+    private function make_stream_emitter( $ai ) {
+        $acc     = '';
+        $emitted = 0;
+        $hold    = 80; // Redaksiyon kalıplarının tipik max uzunluğundan büyük.
+
+        return function ( $delta ) use ( &$acc, &$emitted, $hold, $ai ) {
+            $acc .= $delta;
+            $safe = $ai->safe_stream_prefix( $acc );
+            if ( function_exists( 'smart_assistant_redact_output' ) ) {
+                $safe = smart_assistant_redact_output( $safe );
+            }
+            $ready = mb_strlen( $safe ) - $hold;
+            if ( $ready > $emitted ) {
+                $this->sse_send( [ 'type' => 'delta', 'text' => mb_substr( $safe, $emitted, $ready - $emitted ) ] );
+                $emitted = $ready;
+            }
+        };
+    }
+
+    /**
+     * SSE başlıklarını gönder, output buffering'i kapat.
+     */
+    private function sse_start() {
+        if ( ! headers_sent() ) {
+            header( 'Content-Type: text/event-stream; charset=utf-8' );
+            header( 'Cache-Control: no-cache' );
+            header( 'X-Accel-Buffering: no' ); // nginx buffering kapat.
+        }
+        while ( ob_get_level() > 0 ) {
+            @ob_end_flush(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
+    }
+
+    /**
+     * Tek bir SSE event'i yaz ve flush'la.
+     */
+    private function sse_send( $data ) {
+        echo 'data: ' . wp_json_encode( $data ) . "\n\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- JSON SSE çıktısı.
+        if ( function_exists( 'flush' ) ) {
+            @flush(); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+        }
     }
 
     /**

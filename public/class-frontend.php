@@ -12,6 +12,37 @@ class Frontend {
 
     public function register_hooks() {
         add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_assets' ] );
+        add_action( 'init', [ $this, 'register_shortcode_and_block' ] );
+    }
+
+    /**
+     * [smart_assistant] shortcode'u ve Gutenberg block'u kaydet.
+     * İkisi de aynı inline mount container'ını basar; widget.js bunu görünce
+     * chat panelini sayfa içine gömülü (inline) modda açar.
+     */
+    public function register_shortcode_and_block() {
+        add_shortcode( 'smart_assistant', [ $this, 'render_inline_mount' ] );
+
+        if ( function_exists( 'register_block_type' ) ) {
+            wp_register_script(
+                'smart-assistant-block',
+                SMART_ASSISTANT_URL . 'public/js/block.js',
+                [ 'wp-blocks', 'wp-element' ],
+                SMART_ASSISTANT_VERSION,
+                true
+            );
+            register_block_type( 'smart-assistant/chat', [
+                'editor_script'   => 'smart-assistant-block',
+                'render_callback' => [ $this, 'render_inline_mount' ],
+            ] );
+        }
+    }
+
+    /**
+     * Inline chat mount noktası (shortcode + block ortak çıktısı).
+     */
+    public function render_inline_mount() {
+        return '<div class="sa-inline-wrap" id="smart-assistant-inline"></div>';
     }
 
     public function enqueue_assets() {
@@ -40,6 +71,7 @@ class Frontend {
         $is_single_post = smart_assistant_current_supports_fab();
 
         $identity = smart_assistant_get_identity();
+        $opts     = smart_assistant_get_options();
 
         $localize = [
             'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1/' ) ),
@@ -48,6 +80,15 @@ class Frontend {
             'postId'   => $is_single_post ? (int) get_queried_object_id() : 0,
             'postType' => $is_single_post ? (string) get_post_type() : '',
             'siteUrl'  => esc_url_raw( site_url() ),
+            'persistChat' => (bool) $opts['persist_chat'],
+            'streaming'   => (bool) $opts['enable_streaming'],
+            'feedback'    => (bool) $opts['enable_feedback'],
+            'appearance'  => [
+                'color'        => (string) $opts['appearance_color'],
+                'position'     => (string) $opts['appearance_position'],
+                'icon'         => (string) $opts['appearance_icon'],
+                'welcomeDelay' => (int) $opts['welcome_delay'],
+            ],
             'identity' => [
                 'name'     => $identity['name'],
                 'greeting' => $identity['greeting'],
@@ -74,6 +115,9 @@ class Frontend {
                 'tests'            => __( 'Testler', 'smart-assistant' ),
                 'testsHint'        => __( 'Size yardımcı olabilecek hesaplayıcılar', 'smart-assistant' ),
                 'backToChat'       => __( 'Sohbet', 'smart-assistant' ),
+                'feedbackUp'       => __( 'Faydalı', 'smart-assistant' ),
+                'feedbackDown'     => __( 'Faydasız', 'smart-assistant' ),
+                'feedbackThanks'   => __( 'Teşekkürler!', 'smart-assistant' ),
             ],
         ];
 

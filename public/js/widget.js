@@ -46,32 +46,120 @@
     let root, launcher, fab, panel, panelMessages, panelInput, panelHeader, panelSendBtn;
     let columnContainer, fabContainer;
     let panelTitleEl, panelActionsEl, panelToolsList;
+    let INLINE = false; // Sayfada [smart_assistant] shortcode/block varsa gömülü mod.
+
+    // ===== Sohbet kalıcılığı (sessionStorage — sekme ömrü) =====
+    const STORE_KEY = 'smartAssistantChat.v1';
+
+    function persistState() {
+        if ( ! SA.persistChat ) return;
+        try {
+            sessionStorage.setItem( STORE_KEY, JSON.stringify( {
+                messages: state.messages,
+                history: state.history,
+                suggestions: state.suggestions,
+                activeToolKey: state.activeTool ? state.activeTool.key : null,
+                mode: state.mode,
+            } ) );
+        } catch ( e ) { /* private mode / dolu storage — sessizce geç */ }
+    }
+
+    function restoreState() {
+        if ( ! SA.persistChat ) return false;
+        try {
+            const raw = sessionStorage.getItem( STORE_KEY );
+            if ( ! raw ) return false;
+            const s = JSON.parse( raw );
+            if ( ! s || ! Array.isArray( s.messages ) || ! s.messages.length ) return false;
+            state.messages    = s.messages;
+            state.history     = Array.isArray( s.history ) ? s.history : [];
+            state.suggestions = Array.isArray( s.suggestions ) ? s.suggestions : [];
+            // contextPostId sayfaya özgüdür; sayfalar arasında taşınmaz.
+            if ( s.activeToolKey && Array.isArray( SA.tools ) ) {
+                state.activeTool = SA.tools.find( ( t ) => t.key === s.activeToolKey ) || null;
+            }
+            return { mode: s.mode || 'closed' };
+        } catch ( e ) {
+            return false;
+        }
+    }
+
+    // ===== Görünüm (renk / pozisyon) =====
+    function applyAppearance() {
+        const ap = SA.appearance || {};
+        if ( ap.color && /^#[0-9a-f]{6}$/i.test( ap.color ) ) {
+            document.documentElement.style.setProperty( '--sa-primary', ap.color );
+            document.documentElement.style.setProperty( '--sa-primary-hover', shadeColor( ap.color, -14 ) );
+        }
+        if ( 'left' === ap.position && root ) {
+            root.classList.add( 'sa-pos-left' );
+        }
+    }
+
+    function shadeColor( hex, pct ) {
+        const n = parseInt( hex.slice( 1 ), 16 );
+        const f = 1 + pct / 100;
+        const clamp = ( v ) => Math.max( 0, Math.min( 255, Math.round( v ) ) );
+        return 'rgb(' + clamp( ( ( n >> 16 ) & 255 ) * f ) + ',' + clamp( ( ( n >> 8 ) & 255 ) * f ) + ',' + clamp( ( n & 255 ) * f ) + ')';
+    }
 
     function init() {
         if ( document.getElementById( 'smart-assistant-root' ) ) {
             return;
         }
 
+        INLINE = !! document.getElementById( 'smart-assistant-inline' );
+
         root = el( 'div', { id: 'smart-assistant-root', className: 'sa-root sa-mode-closed' } );
         document.body.appendChild( root );
+
+        applyAppearance();
 
         buildLauncher();
         buildFab();
         buildPanel();
         buildColumnContainer();
 
-        // ESC kapat
+        // ESC kapat (inline modda panel hep açık).
         document.addEventListener( 'keydown', ( e ) => {
-            if ( 'Escape' === e.key && state.mode !== 'closed' ) {
+            if ( 'Escape' === e.key && state.mode !== 'closed' && ! INLINE ) {
                 close();
             }
         } );
 
-        // Welcome message göster (chat içinde)
-        pushMessage( 'assistant', SA.i18n.welcomeMsg );
+        const restored = restoreState();
 
-        // 2 saniye sonra sağ alttaki tanıtım balonunu göster.
-        setTimeout( showWelcomeBubble, 2000 );
+        // Inline mod: paneli shortcode/block container'ına taşı, hep açık tut.
+        if ( INLINE ) {
+            const host = document.getElementById( 'smart-assistant-inline' );
+            host.appendChild( panel );
+            panel.hidden = false;
+            state.mode = 'fab';
+            if ( launcher ) launcher.style.display = 'none';
+        }
+
+        if ( restored ) {
+            renderMessages();
+            renderSuggestions();
+            updatePanelHeader();
+            if ( ! INLINE && ( 'fab' === restored.mode || 'column' === restored.mode ) ) {
+                switchMode( restored.mode );
+            }
+        } else {
+            // Welcome message göster (chat içinde)
+            pushMessage( 'assistant', SA.i18n.welcomeMsg, [], { welcome: true } );
+        }
+
+        if ( INLINE ) {
+            updatePanelHeader();
+        }
+
+        // Tanıtım balonu: ayarlanabilir gecikme (0 = kapalı). Inline modda gereksiz.
+        const delay = SA.appearance && 'number' === typeof SA.appearance.welcomeDelay
+            ? SA.appearance.welcomeDelay : 2;
+        if ( ! INLINE && delay > 0 ) {
+            setTimeout( showWelcomeBubble, delay * 1000 );
+        }
     }
 
     // ===== Launcher (sağ alt balon) =====
@@ -84,7 +172,7 @@
                 type: 'button',
                 onClick: toggleFab,
             },
-            el( 'span', { className: 'sa-launcher-icon', 'aria-hidden': 'true' }, '💬' )
+            el( 'span', { className: 'sa-launcher-icon', 'aria-hidden': 'true' }, ( SA.appearance && SA.appearance.icon ) || '💬' )
         );
         root.appendChild( launcher );
     }
@@ -201,7 +289,7 @@
                 type: 'button',
                 onClick: showChatView,
             }, backLabel ) );
-            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+            if ( ! INLINE ) panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
         } else if ( state.activeTool ) {
             panelTitleEl.appendChild( document.createTextNode( state.activeTool.icon + ' ' ) );
             panelTitleEl.appendChild( el( 'strong', {}, state.activeTool.label ) );
@@ -213,15 +301,17 @@
             }, '← ' + SA.i18n.tests ) );
             // Doğrudan normal sohbete dön (araç oturumunu kapat).
             panelActionsEl.appendChild( buildIconBtn( '💬', SA.i18n.backToChat || 'Sohbet', exitTool, 'sa-btn-home' ) );
-            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+            if ( ! INLINE ) panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
         } else {
             panelTitleEl.appendChild( document.createTextNode( '🤖 ' ) );
             panelTitleEl.appendChild( el( 'strong', {}, SA.i18n.openChat ) );
             if ( hasTools ) {
                 panelActionsEl.appendChild( buildIconBtn( '🧪', SA.i18n.tests, showToolsList, 'sa-btn-tools' ) );
             }
-            panelActionsEl.appendChild( buildIconBtn( '↗', SA.i18n.expand, () => switchMode( 'column' ), 'sa-btn-expand' ) );
-            panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+            if ( ! INLINE ) {
+                panelActionsEl.appendChild( buildIconBtn( '↗', SA.i18n.expand, () => switchMode( 'column' ), 'sa-btn-expand' ) );
+                panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
+            }
         }
     }
 
@@ -259,7 +349,7 @@
         if ( panelMessages ) panelMessages.hidden = false;
         renderMessages();
         renderSuggestions();
-        pushMessage( 'assistant', SA.i18n.welcomeMsg );
+        pushMessage( 'assistant', SA.i18n.welcomeMsg, [], { welcome: true } );
         updatePanelHeader();
         if ( panelInput ) panelInput.focus();
     }
@@ -303,7 +393,7 @@
         showChatView();
         renderMessages();
         renderSuggestions();
-        pushMessage( 'assistant', tool.welcomeMsg );
+        pushMessage( 'assistant', tool.welcomeMsg, [], { welcome: true } );
 
         if ( panelInput ) panelInput.focus();
     }
@@ -380,7 +470,7 @@
 
     function switchMode( newMode ) {
         state.mode = newMode;
-        root.className = 'sa-root sa-mode-' + newMode;
+        root.className = 'sa-root sa-mode-' + newMode + ( root.classList.contains( 'sa-pos-left' ) ? ' sa-pos-left' : '' );
 
         // Chat açıldığında welcome bubble'ı kaldır.
         dismissWelcomeBubble();
@@ -411,6 +501,8 @@
                 if ( inp ) inp.focus();
             }, 100 );
         }
+
+        persistState();
     }
 
     function openSummarize() {
@@ -424,11 +516,13 @@
     }
 
     function close() {
+        if ( INLINE ) return; // Gömülü mod: panel her zaman açık.
         state.mode = 'closed';
-        root.className = 'sa-root sa-mode-closed';
+        root.className = 'sa-root sa-mode-closed' + ( root.classList.contains( 'sa-pos-left' ) ? ' sa-pos-left' : '' );
         if ( panel ) panel.hidden = true;
         if ( columnContainer ) columnContainer.hidden = true;
         document.body.classList.remove( 'sa-column-active' );
+        persistState();
         // Chat kapandığında tekrar welcome bubble gösterme — kullanıcı kapattı.
     }
 
@@ -444,7 +538,7 @@
         state.activeTool = null;
         renderMessages();
         renderSuggestions();
-        pushMessage( 'assistant', SA.i18n.welcomeMsg );
+        pushMessage( 'assistant', SA.i18n.welcomeMsg, [], { welcome: true } );
         if ( hadTool ) updatePanelHeader();
     }
 
@@ -500,9 +594,10 @@
     }
 
     // ===== Messages =====
-    function pushMessage( role, content, sources = [] ) {
-        state.messages.push( { role, content, sources, ts: Date.now() } );
+    function pushMessage( role, content, sources = [], extra = {} ) {
+        state.messages.push( Object.assign( { role, content, sources, ts: Date.now() }, extra ) );
         renderMessages();
+        persistState();
     }
 
     function clearSuggestions() {
@@ -577,9 +672,50 @@
             }
             // Her mesajda kopyalama butonu.
             bubble.appendChild( renderCopyButton( m.content ) );
+            // AI cevaplarına 👍/👎 (karşılama ve hata mesajları hariç).
+            if ( SA.feedback && 'assistant' === m.role && ! m.welcome && ! m.noFeedback ) {
+                bubble.appendChild( renderFeedback( m ) );
+            }
             container.appendChild( bubble );
         } );
         container.scrollTop = container.scrollHeight;
+    }
+
+    // ===== Geri bildirim (👍/👎) =====
+    function renderFeedback( m ) {
+        const wrap = el( 'div', { className: 'sa-msg-feedback' } );
+        const mk = ( rating, icon, label ) => el( 'button', {
+            className: 'sa-fb-btn' + ( m.feedback === rating ? ' is-active' : '' ),
+            type: 'button',
+            'aria-label': label,
+            title: label,
+            disabled: !! m.feedback,
+            onClick: () => submitFeedback( m, rating ),
+        }, icon );
+        wrap.appendChild( mk( 'up', '👍', SA.i18n.feedbackUp || 'Faydalı' ) );
+        wrap.appendChild( mk( 'down', '👎', SA.i18n.feedbackDown || 'Faydasız' ) );
+        if ( m.feedback ) {
+            wrap.appendChild( el( 'span', { className: 'sa-fb-thanks' }, SA.i18n.feedbackThanks || 'Teşekkürler!' ) );
+        }
+        return wrap;
+    }
+
+    function submitFeedback( m, rating ) {
+        if ( m.feedback ) return;
+        m.feedback = rating;
+        persistState();
+        renderMessages();
+        // Fire-and-forget; hata durumunda kullanıcıyı rahatsız etme.
+        fetch( SA.restUrl + 'feedback', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': SA.nonce },
+            body: JSON.stringify( {
+                nonce: SA.nonce,
+                rating: rating,
+                message: ( m.content || '' ).slice( 0, 300 ),
+            } ),
+        } ).catch( () => {} );
     }
 
     /**
@@ -835,6 +971,7 @@
         if ( ! isSummarize && text ) {
             pushMessage( 'user', text );
             state.history.push( { role: 'user', content: text } );
+            persistState();
         }
 
         // Loading bubble.
@@ -864,6 +1001,17 @@
                 if ( state.activeTool ) body.tool = state.activeTool.key;
             }
 
+            // Streaming (yalnızca chat; summarize öneri parse'ı için tam metin ister).
+            if ( ! isSummarize && SA.streaming && window.ReadableStream && window.TextDecoder ) {
+                const handled = await sendMessageStream( body, loadingBubble, target );
+                if ( handled ) {
+                    return; // finally pending'i sıfırlar.
+                }
+                // Streaming başlatılamadı → bubble'ı eski haline getirip normal yola düş.
+                loadingBubble.textContent = SA.i18n.thinking;
+                loadingBubble.classList.remove( 'sa-streaming' );
+            }
+
             const r = await fetch( endpoint, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -875,7 +1023,7 @@
             loadingBubble.remove();
 
             if ( ! r.ok ) {
-                pushMessage( 'assistant', ( data && data.message ) || SA.i18n.error );
+                pushMessage( 'assistant', ( data && data.message ) || SA.i18n.error, [], { noFeedback: true } );
                 return;
             }
 
@@ -885,17 +1033,105 @@
             } else if ( isSummarize ) {
                 state.history.push( { role: 'assistant', content: data.reply } );
             }
+            persistState();
 
             // Özet sonrası önerilen sorular (Mod 1 ve Mod 2 için geçerli).
             if ( isSummarize && Array.isArray( data.suggestions ) && data.suggestions.length ) {
                 state.suggestions = data.suggestions;
                 renderSuggestions();
+                persistState();
             }
         } catch ( e ) {
             loadingBubble.remove();
-            pushMessage( 'assistant', SA.i18n.error + ' (' + ( e.message || '' ) + ')' );
+            pushMessage( 'assistant', SA.i18n.error + ' (' + ( e.message || '' ) + ')', [], { noFeedback: true } );
         } finally {
             state.pending = false;
+        }
+    }
+
+    /**
+     * SSE streaming ile chat isteği. Başarıyla işlendiyse true döner;
+     * streaming kurulamadıysa false döner ve çağıran normal yola düşer.
+     */
+    async function sendMessageStream( body, bubble, target ) {
+        let acc = '';
+        try {
+            const r = await fetch( SA.restUrl + 'chat', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': SA.nonce },
+                body: JSON.stringify( Object.assign( {}, body, { stream: 1 } ) ),
+            } );
+
+            const ct = r.headers.get( 'content-type' ) || '';
+            if ( ! r.ok || -1 === ct.indexOf( 'text/event-stream' ) || ! r.body ) {
+                return false; // Sunucu SSE dönmedi (hata veya desteklenmiyor) → normal yol.
+            }
+
+            bubble.classList.add( 'sa-streaming' );
+            bubble.textContent = '';
+
+            const reader  = r.body.getReader();
+            const decoder = new TextDecoder();
+            let buf       = '';
+            let finalData = null;
+            let errMsg    = null;
+
+            for ( ;; ) {
+                const { done, value } = await reader.read();
+                if ( done ) break;
+                buf += decoder.decode( value, { stream: true } );
+                let idx;
+                while ( -1 !== ( idx = buf.indexOf( '\n\n' ) ) ) {
+                    const frame = buf.slice( 0, idx );
+                    buf = buf.slice( idx + 2 );
+                    frame.split( '\n' ).forEach( ( line ) => {
+                        if ( 0 !== line.indexOf( 'data:' ) ) return;
+                        let d;
+                        try {
+                            d = JSON.parse( line.slice( 5 ).trim() );
+                        } catch ( e ) {
+                            return;
+                        }
+                        if ( 'delta' === d.type && d.text ) {
+                            acc += d.text;
+                            bubble.textContent = acc;
+                            if ( target ) target.scrollTop = target.scrollHeight;
+                        } else if ( 'done' === d.type ) {
+                            finalData = d;
+                        } else if ( 'error' === d.type ) {
+                            errMsg = d.message || '';
+                        }
+                    } );
+                }
+            }
+
+            bubble.remove();
+
+            if ( null !== errMsg ) {
+                pushMessage( 'assistant', errMsg || SA.i18n.error, [], { noFeedback: true } );
+                return true;
+            }
+
+            // 'done' event'indeki metin otoritatiftir (tam post-processing uygulanmış).
+            const reply = finalData ? finalData.reply : acc;
+            if ( ! reply ) {
+                return false;
+            }
+            pushMessage( 'assistant', reply, ( finalData && finalData.sources ) || [] );
+            state.history.push( { role: 'assistant', content: reply } );
+            persistState();
+            return true;
+        } catch ( e ) {
+            // Akış ortasında koptu: kısmi içerik geldiyse onu koru (isteği tekrarlama).
+            if ( acc ) {
+                bubble.remove();
+                pushMessage( 'assistant', acc );
+                state.history.push( { role: 'assistant', content: acc } );
+                persistState();
+                return true;
+            }
+            return false;
         }
     }
 

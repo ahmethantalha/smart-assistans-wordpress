@@ -30,7 +30,7 @@
     height: 52px;
     border-radius: 50%;
     border: none;
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     font-size: 22px;
     cursor: pointer;
@@ -44,7 +44,7 @@
 
 .sa-launcher:hover {
     transform: scale(1.06);
-    background: #1e293b;
+    background: var(--sa-primary-hover, #1e293b);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
@@ -80,7 +80,7 @@
 
 /* === Panel header === */
 .sa-panel-header {
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     padding: 14px 14px 14px 16px;
     display: flex;
@@ -161,7 +161,7 @@
 
 .sa-msg-user {
     align-self: flex-end;
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     border-bottom-right-radius: 4px;
 }
@@ -270,7 +270,7 @@
 .sa-panel-input:focus,
 .sa-column-input:focus {
     outline: none;
-    border-color: #0f172a;
+    border-color: var(--sa-primary, #0f172a);
     background: #fff;
     box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.07);
 }
@@ -282,7 +282,7 @@
 
 .sa-panel-send,
 .sa-column-send {
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -298,7 +298,7 @@
 
 .sa-panel-send:hover,
 .sa-column-send:hover {
-    background: #1e293b;
+    background: var(--sa-primary-hover, #1e293b);
 }
 
 /* === Column mode (sağda sabit sütun) === */
@@ -324,7 +324,7 @@
 }
 
 .sa-column-header {
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     padding: 16px 14px 16px 18px;
     display: flex;
@@ -429,7 +429,7 @@ body.sa-column-active {
 
 .sa-suggestion-chip:hover {
     background: #f1f5f9;
-    border-color: #0f172a;
+    border-color: var(--sa-primary, #0f172a);
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
@@ -479,7 +479,7 @@ body.sa-column-active {
 }
 
 .sa-tool-card:hover {
-    border-color: #0f172a;
+    border-color: var(--sa-primary, #0f172a);
     background: #f8fafc;
     box-shadow: 0 2px 12px rgba(15, 23, 42, 0.07);
 }
@@ -630,7 +630,7 @@ body.sa-column-active {
 }
 
 .sa-welcome-bubble-cta {
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #fff;
     border: none;
     padding: 8px 14px;
@@ -642,7 +642,7 @@ body.sa-column-active {
     transition: background 0.15s;
 }
 .sa-welcome-bubble-cta:hover {
-    background: #1e293b;
+    background: var(--sa-primary-hover, #1e293b);
 }
 
 .sa-welcome-bubble-tail {
@@ -737,7 +737,7 @@ body.sa-column-active {
 }
 
 .sa-msg-assistant pre {
-    background: #0f172a;
+    background: var(--sa-primary, #0f172a);
     color: #e2e8f0;
     padding: 12px 14px;
     border-radius: 8px;
@@ -837,4 +837,96 @@ body.sa-column-active {
 @media (max-width: 640px) {
     .sa-msg-copy { opacity: 0.55; }
     .sa-msg-copy.is-copied { opacity: 1; }
+}
+
+/* =====================================================
+   Faz A eklemeleri: sol konum, geri bildirim, streaming,
+   inline (shortcode/block) modu
+   ===================================================== */
+
+/* === Sol konum === */
+.sa-root.sa-pos-left .sa-launcher,
+.sa-root.sa-pos-left .sa-panel,
+.sa-root.sa-pos-left .sa-welcome-bubble {
+    right: auto;
+    left: 24px;
+}
+
+.sa-root.sa-pos-left .sa-fab-container {
+    right: auto;
+    left: 86px;
+}
+
+.sa-root.sa-pos-left .sa-welcome-bubble-tail {
+    right: auto;
+    left: 18px;
+}
+
+/* === Geri bildirim (👍/👎) === */
+.sa-msg-feedback {
+    display: flex;
+    gap: 4px;
+    margin-top: 8px;
+}
+
+.sa-fb-btn {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1.6;
+    cursor: pointer;
+    opacity: 0.65;
+    transition: opacity 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.sa-fb-btn:hover {
+    opacity: 1;
+    background: #f8fafc;
+}
+
+.sa-fb-btn.is-active {
+    opacity: 1;
+    background: #eef2ff;
+    border-color: var(--sa-primary, #0f172a);
+}
+
+.sa-fb-btn[disabled] {
+    cursor: default;
+}
+
+.sa-fb-thanks {
+    font-size: 11.5px;
+    color: #64748b;
+    align-self: center;
+}
+
+/* === Streaming imleci === */
+.sa-msg.sa-streaming::after {
+    content: '▍';
+    display: inline;
+    animation: sa-blink 1s steps(1) infinite;
+    color: #94a3b8;
+}
+
+@keyframes sa-blink {
+    50% { opacity: 0; }
+}
+
+/* === Inline (shortcode / Gutenberg block) modu === */
+.sa-inline-wrap {
+    position: relative;
+    max-width: 720px;
+    margin: 24px auto;
+}
+
+.sa-inline-wrap .sa-panel {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    height: 520px;
+    max-height: none;
+    animation: none;
+    pointer-events: auto;
 }
