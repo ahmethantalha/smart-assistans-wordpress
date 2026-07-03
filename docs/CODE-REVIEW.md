@@ -19,8 +19,18 @@ Her bulgu dosya/satır referansı ve önerilen düzeltmeyle listelenmiştir. Son
 
 > **Güncelleme (2026-07-03):** Aşağıdaki bulgular bu dalda düzeltildi:
 > **G1, G2, G3, G4, G5** (tüm güvenlik) ve **M1, M2, M3, M4** (mantık hataları).
+>
+> Ayrıca **prompt injection & kişisel veri koruması** için çok katmanlı savunma eklendi:
+> - `smart_assistant_security_preamble()` — ezilemez, sunucu-taraflı güvenlik önsözü
+>   HER system prompt'una eklenir (parola/şifre/API anahtarı/kişisel veri ifşasını,
+>   hesap/parola işlemlerini ve talimat-ezme denemelerini reddeder).
+> - Kaynak metinler "yalnızca veri, talimat değil" olarak çerçevelenir (indirect injection).
+> - `smart_assistant_redact_output()` — çıktıda kalan e-posta, gizli anahtar/token ve
+>   yapılandırılmış API anahtarı maskelenir (filtrelerle ayarlanabilir).
+> - `smart_assistant_looks_like_injection()` — olası injection denemeleri loglanır.
+>
 > Açık kalan: **M5** (MiniMax model kimlikleri dış doğrulama gerektiriyor) ve
-> Faz 3/4 iyileştirmeleri.
+> Faz 3 (RestController testleri, N+1 optimizasyonu).
 
 ---
 

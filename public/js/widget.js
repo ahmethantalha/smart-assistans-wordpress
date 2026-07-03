@@ -192,20 +192,27 @@
         if ( 'tools-list' === state.uiView ) {
             panelTitleEl.appendChild( document.createTextNode( '🧪 ' ) );
             panelTitleEl.appendChild( el( 'strong', {}, SA.i18n.tests ) );
+            // Aktif bir araç varsa geri tuşu o araca döner; yoksa normal sohbete.
+            const backLabel = state.activeTool
+                ? ( '← ' + state.activeTool.label )
+                : ( '← ' + ( SA.i18n.backToChat || 'Sohbet' ) );
             panelActionsEl.appendChild( el( 'button', {
                 className: 'sa-tool-back',
                 type: 'button',
                 onClick: showChatView,
-            }, '← ' + ( SA.i18n.backToChat || 'Sohbet' ) ) );
+            }, backLabel ) );
             panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
         } else if ( state.activeTool ) {
             panelTitleEl.appendChild( document.createTextNode( state.activeTool.icon + ' ' ) );
             panelTitleEl.appendChild( el( 'strong', {}, state.activeTool.label ) );
+            // Araç listesine dön.
             panelActionsEl.appendChild( el( 'button', {
                 className: 'sa-tool-back',
                 type: 'button',
                 onClick: showToolsList,
             }, '← ' + SA.i18n.tests ) );
+            // Doğrudan normal sohbete dön (araç oturumunu kapat).
+            panelActionsEl.appendChild( buildIconBtn( '💬', SA.i18n.backToChat || 'Sohbet', exitTool, 'sa-btn-home' ) );
             panelActionsEl.appendChild( buildIconBtn( '×', SA.i18n.closeChat, () => close(), 'sa-btn-close' ) );
         } else {
             panelTitleEl.appendChild( document.createTextNode( '🤖 ' ) );
@@ -235,6 +242,26 @@
         const sugg = panel && panel.querySelector( '.sa-suggestions' );
         if ( sugg ) sugg.hidden = false;
         updatePanelHeader();
+    }
+
+    /**
+     * Aktif araçtan çıkıp normal sohbete dön: araç oturumunu temizle,
+     * geçmişi sıfırla ve karşılama mesajını göster.
+     */
+    function exitTool() {
+        state.activeTool    = null;
+        state.messages      = [];
+        state.history       = [];
+        state.suggestions   = [];
+        state.contextPostId = 0;
+        state.uiView        = 'chat';
+        if ( panelToolsList ) panelToolsList.hidden = true;
+        if ( panelMessages ) panelMessages.hidden = false;
+        renderMessages();
+        renderSuggestions();
+        pushMessage( 'assistant', SA.i18n.welcomeMsg );
+        updatePanelHeader();
+        if ( panelInput ) panelInput.focus();
     }
 
     function renderToolsList() {

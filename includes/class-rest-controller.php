@@ -148,6 +148,14 @@ class RestController {
         $history = $this->normalize_history( $request->get_param( 'history' ) );
         $post_id = absint( $request->get_param( 'post_id' ) );
         $tool    = sanitize_key( (string) $request->get_param( 'tool' ) );
+
+        // Olası prompt-injection denemesini izleme amacıyla logla (bloklama yok).
+        if ( smart_assistant_looks_like_injection( $message ) ) {
+            smart_assistant_log(
+                'Olası prompt injection denemesi (IP: ' . $this->get_client_ip() . '): ' . mb_substr( $message, 0, 200 ),
+                'warning'
+            );
+        }
         $tools   = smart_assistant_get_tools();
         if ( '' !== $tool && ! isset( $tools[ $tool ] ) ) {
             $tool = '';

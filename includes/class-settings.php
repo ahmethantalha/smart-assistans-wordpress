@@ -195,17 +195,26 @@ class Settings {
         if ( ! empty( $input['tools_submitted'] ) ) {
             $raw_tools       = is_array( $input['tools'] ?? null ) ? $input['tools'] : [];
             $sanitized_tools = [];
+            $seen_keys       = [];
             foreach ( $raw_tools as $t ) {
                 if ( ! is_array( $t ) ) {
                     continue;
                 }
-                $key = sanitize_key( $t['key'] ?? '' );
-                if ( '' === $key ) {
+                $key   = sanitize_key( $t['key'] ?? '' );
+                $label = sanitize_text_field( $t['label'] ?? '' );
+                // Key boşsa başlıktan otomatik türet (kullanıcı yeni test eklerken
+                // key girmeyi unutursa satır sessizce kaybolmasın).
+                if ( '' === $key && '' !== $label ) {
+                    $key = sanitize_key( sanitize_title( $label ) );
+                }
+                // Hâlâ boşsa ya da bu key daha önce kullanıldıysa atla (çakışma önlemi).
+                if ( '' === $key || isset( $seen_keys[ $key ] ) ) {
                     continue;
                 }
+                $seen_keys[ $key ] = true;
                 $sanitized_tools[] = [
                     'key'           => $key,
-                    'label'         => sanitize_text_field( $t['label'] ?? '' ),
+                    'label'         => $label,
                     'icon'          => sanitize_text_field( $t['icon'] ?? '🤖' ),
                     'description'   => sanitize_text_field( $t['description'] ?? '' ),
                     'welcome_msg'   => sanitize_textarea_field( $t['welcome_msg'] ?? '' ),
