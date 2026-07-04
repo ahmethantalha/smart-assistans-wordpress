@@ -165,6 +165,8 @@ function smart_assistant_get_options() {
         'on_strategy_model'   => '',       // Opsiyonel: boşsa ON default.
         'on_answer_model'     => '',       // Opsiyonel: boşsa ON default.
         'on_final_answer_model' => '',     // Opsiyonel: boşsa ON default.
+        'on_cf_client_id'     => '',       // Cloudflare Access Service Token — Client ID.
+        'on_cf_client_secret' => '',       // Cloudflare Access Service Token — Client Secret.
         'enable_abilities'  => true,
         // AI Kimliği.
         'ai_name'         => '',           // Boşsa site adından otomatik üretilir.

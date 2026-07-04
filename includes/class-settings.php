@@ -111,6 +111,8 @@ class Settings {
         $this->add_field( 'on_strategy_model', __( 'ON Strateji Modeli', 'smart-assistant' ), 'render_on_strategy_model_field' );
         $this->add_field( 'on_answer_model', __( 'ON Cevap Modeli', 'smart-assistant' ), 'render_on_answer_model_field' );
         $this->add_field( 'on_final_answer_model', __( 'ON Final Cevap Modeli', 'smart-assistant' ), 'render_on_final_answer_model_field' );
+        $this->add_field( 'on_cf_client_id', __( 'Cloudflare Access Client ID', 'smart-assistant' ), 'render_on_cf_client_id_field' );
+        $this->add_field( 'on_cf_client_secret', __( 'Cloudflare Access Client Secret', 'smart-assistant' ), 'render_on_cf_client_secret_field' );
         $this->add_field( 'rate_limit_per_min', __( 'Dakikada Max İstek', 'smart-assistant' ), 'render_rate_limit_field' );
         $this->add_field( 'enable_abilities', __( 'Abilities API Aktif', 'smart-assistant' ), 'render_abilities_field' );
 
@@ -180,6 +182,18 @@ class Settings {
         $out['on_strategy_model']   = sanitize_text_field( $input['on_strategy_model'] ?? '' );
         $out['on_answer_model']     = sanitize_text_field( $input['on_answer_model'] ?? '' );
         $out['on_final_answer_model']= sanitize_text_field( $input['on_final_answer_model'] ?? '' );
+
+        // Cloudflare Access Service Token — Client ID (mask kontrolü, sadece yeniyse güncelle).
+        $cf_id_input = $input['on_cf_client_id'] ?? '';
+        if ( is_string( $cf_id_input ) && '' !== $cf_id_input && strpos( $cf_id_input, '•' ) === false ) {
+            $out['on_cf_client_id'] = sanitize_text_field( $cf_id_input );
+        }
+
+        // Cloudflare Access Service Token — Client Secret (aynı mantık).
+        $cf_secret_input = $input['on_cf_client_secret'] ?? '';
+        if ( is_string( $cf_secret_input ) && '' !== $cf_secret_input && strpos( $cf_secret_input, '•' ) === false ) {
+            $out['on_cf_client_secret'] = sanitize_text_field( $cf_secret_input );
+        }
         $out['rate_limit_per_min'] = max( 1, min( 200, intval( $input['rate_limit_per_min'] ?? 20 ) ) );
         $out['enable_abilities']   = ! empty( $input['enable_abilities'] );
 
@@ -483,6 +497,36 @@ class Settings {
                placeholder="<?php echo esc_attr( \SmartAssistant\OpenNotebook::DEFAULT_FINAL_MODEL ); ?>" />
         <p class="description">
             <?php esc_html_e( 'Son cevap modeli (boşsa ON varsayılanı: MiniMax-M3). Büyük context gerekirse büyük_context_model\'i kullanabilirsin.', 'smart-assistant' ); ?>
+        </p>
+        <?php
+    }
+
+    public function render_on_cf_client_id_field() {
+        $opts    = smart_assistant_get_options();
+        $has_val = ! empty( $opts['on_cf_client_id'] );
+        $placeholder = $has_val
+            ? str_repeat( '•', 8 ) . substr( $opts['on_cf_client_id'], -4 ) . ' — boş bırakırsan değişmez'
+            : 'örn. a1b2c3d4e5f6...service-token-id';
+        ?>
+        <input type="password" name="smart_assistant_options[on_cf_client_id]"
+               value="" placeholder="<?php echo esc_attr( $placeholder ); ?>" class="regular-text" autocomplete="new-password" />
+        <p class="description">
+            <?php esc_html_e( 'Cloudflare Access Service Token → Client ID. Open Notebook API\'nizi CF Access ile koruyorsanız doldurun. Boş bırakırsanız CF Access header\'ı gönderilmez.', 'smart-assistant' ); ?>
+        </p>
+        <?php
+    }
+
+    public function render_on_cf_client_secret_field() {
+        $opts    = smart_assistant_get_options();
+        $has_val = ! empty( $opts['on_cf_client_secret'] );
+        $placeholder = $has_val
+            ? str_repeat( '•', 8 ) . substr( $opts['on_cf_client_secret'], -4 ) . ' — boş bırakırsan değişmez'
+            : 'örn. fedcba9876543210...service-token-secret';
+        ?>
+        <input type="password" name="smart_assistant_options[on_cf_client_secret]"
+               value="" placeholder="<?php echo esc_attr( $placeholder ); ?>" class="regular-text" autocomplete="new-password" />
+        <p class="description">
+            <?php esc_html_e( 'Cloudflare Access Service Token → Client Secret. ID ile birlikte her istekte CF-Access-Client-Id ve CF-Access-Client-Secret header\'ları otomatik eklenir.', 'smart-assistant' ); ?>
         </p>
         <?php
     }

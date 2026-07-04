@@ -9,7 +9,8 @@ if ( ! defined( 'ABSPATH' ) ) {
  * Open Notebook (Mod 2) istemcisi.
  *
  * ON API: https://opennotebook-api.hizliadisyo.com
- * Auth: kapalı (auth_enabled: false) — header'da token gerekmez.
+ * Auth: opsiyonel — Cloudflare Access ile korunuyorsa Service Token header'ları
+ *       (CF-Access-Client-Id + CF-Access-Client-Secret) gönderilir.
  *
  * Endpoint'ler:
  *  - POST /api/search/ask/simple      → soru sor, cevap al
@@ -51,7 +52,7 @@ class OpenNotebook {
         ];
 
         $response = wp_remote_post( $endpoint, [
-            'headers' => [ 'Content-Type' => 'application/json' ],
+            'headers' => $this->build_headers( $opts ),
             'body'    => wp_json_encode( $body ),
             'timeout' => 60,
         ] );
@@ -153,7 +154,7 @@ class OpenNotebook {
         }
 
         $response = wp_remote_post( $endpoint, [
-            'headers' => [ 'Content-Type' => 'application/json' ],
+            'headers' => $this->build_headers( $opts ),
             'body'    => wp_json_encode( $body ),
             'timeout' => 30,
         ] );
@@ -191,7 +192,10 @@ class OpenNotebook {
         }
 
         $endpoint = rtrim( $opts['open_notebook_url'], '/' ) . '/api/notebooks';
-        $response = wp_remote_get( $endpoint, [ 'timeout' => 15 ] );
+        $response = wp_remote_get( $endpoint, [
+            'headers' => $this->build_headers( $opts ),
+            'timeout' => 15,
+        ] );
 
         if ( is_wp_error( $response ) ) {
             return $response;
@@ -289,6 +293,27 @@ class OpenNotebook {
         }
 
         return $sources;
+    }
+
+    /**
+     * Cloudflare Access Service Token header'larını içeren header listesi üret.
+     * Token'lar ayarlanmamışsa sadece Content-Type döner (auth yok modu için).
+     *
+     * @param array $opts
+     * @return array
+     */
+    private function build_headers( $opts ) {
+        $headers = [ 'Content-Type' => 'application/json' ];
+
+        $cf_id     = trim( $opts['on_cf_client_id']     ?? '' );
+        $cf_secret = trim( $opts['on_cf_client_secret'] ?? '' );
+
+        if ( '' !== $cf_id && '' !== $cf_secret ) {
+            $headers['CF-Access-Client-Id']     = $cf_id;
+            $headers['CF-Access-Client-Secret'] = $cf_secret;
+        }
+
+        return $headers;
     }
 
     /**
