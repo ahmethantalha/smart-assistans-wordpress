@@ -506,12 +506,12 @@ class Settings {
         $has_val = ! empty( $opts['on_cf_client_id'] );
         $placeholder = $has_val
             ? str_repeat( '•', 8 ) . substr( $opts['on_cf_client_id'], -4 ) . ' — boş bırakırsan değişmez'
-            : 'örn. a1b2c3d4e5f6...service-token-id';
+            : 'örn. a1b2c3d4e5f60718293a4b5c6d7e8f90.access';
         ?>
         <input type="password" name="smart_assistant_options[on_cf_client_id]"
                value="" placeholder="<?php echo esc_attr( $placeholder ); ?>" class="regular-text" autocomplete="new-password" />
         <p class="description">
-            <?php esc_html_e( 'Cloudflare Access Service Token → Client ID. Open Notebook API\'nizi CF Access ile koruyorsanız doldurun. Boş bırakırsanız CF Access header\'ı gönderilmez.', 'smart-assistant' ); ?>
+            <?php esc_html_e( 'Cloudflare Access Service Token → Client ID. 32 hex karakter + ".access" son ekinden oluşur (kopyaladığınızda bu son ek dahil gelir). Open Notebook API\'nizi CF Access ile koruyorsanız doldurun. Boş bırakırsanız CF Access header\'ı gönderilmez.', 'smart-assistant' ); ?>
         </p>
         <?php
     }
@@ -521,12 +521,12 @@ class Settings {
         $has_val = ! empty( $opts['on_cf_client_secret'] );
         $placeholder = $has_val
             ? str_repeat( '•', 8 ) . substr( $opts['on_cf_client_secret'], -4 ) . ' — boş bırakırsan değişmez'
-            : 'örn. fedcba9876543210...service-token-secret';
+            : 'örn. fedcba9876543210abcdef0123456789abcdef0123456789abcdef0123456789';
         ?>
         <input type="password" name="smart_assistant_options[on_cf_client_secret]"
                value="" placeholder="<?php echo esc_attr( $placeholder ); ?>" class="regular-text" autocomplete="new-password" />
         <p class="description">
-            <?php esc_html_e( 'Cloudflare Access Service Token → Client Secret. ID ile birlikte her istekte CF-Access-Client-Id ve CF-Access-Client-Secret header\'ları otomatik eklenir.', 'smart-assistant' ); ?>
+            <?php esc_html_e( 'Cloudflare Access Service Token → Client Secret. 64 hex karakterden oluşur (uzantısız). ID ile birlikte her istekte CF-Access-Client-Id ve CF-Access-Client-Secret header\'ları otomatik eklenir.', 'smart-assistant' ); ?>
         </p>
         <?php
     }

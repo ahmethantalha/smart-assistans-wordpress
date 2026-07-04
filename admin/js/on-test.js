@@ -27,11 +27,19 @@
                 $btn.prop( 'disabled', false );
                 if ( data.ok ) {
                     const i18n = ( window.SmartAssistantAdmin && window.SmartAssistantAdmin.i18n ) || {};
-                    $result.html(
-                        '<span style="color:#16a34a;font-weight:600;">' +
+                    const warnings = ( data.debug && Array.isArray( data.debug.format_warnings ) )
+                        ? data.debug.format_warnings
+                        : [];
+                    let html = '<span style="color:#16a34a;font-weight:600;">' +
                         ( i18n.onSuccess || '✓ Open Notebook\'e erişildi' ) +
-                        '</span> — <strong>' + ( data.count || 0 ) + '</strong> notebook'
-                    );
+                        '</span> — <strong>' + ( data.count || 0 ) + '</strong> notebook';
+                    if ( warnings.length ) {
+                        html += '<div style="margin-top:8px;padding:10px 12px;background:#fef3c7;color:#92400e;border-radius:6px;font-size:0.85rem;">';
+                        html += '<strong>⚠️ Format Uyarısı</strong><ul style="margin:6px 0 0 16px;padding:0;">';
+                        warnings.forEach( ( w ) => { html += '<li>' + w + '</li>'; } );
+                        html += '</ul></div>';
+                    }
+                    $result.html( html );
                     $debug.show().text( JSON.stringify( data.debug, null, 2 ) );
                 } else {
                     const i18n = ( window.SmartAssistantAdmin && window.SmartAssistantAdmin.i18n ) || {};

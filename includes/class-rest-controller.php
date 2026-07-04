@@ -265,10 +265,38 @@ class RestController {
 
         $has_cf = ! empty( $opts['on_cf_client_id'] ) && ! empty( $opts['on_cf_client_secret'] );
 
+        // CF Access Service Token format doğrulaması (sadece bilgilendirme; bloke etmiyoruz).
+        // ID formatı: 32 hex + ".access" suffix. Secret: 64 hex.
+        $cf_id_format_ok     = false;
+        $cf_secret_format_ok = false;
+        $cf_id_masked        = '';
+        $cf_secret_masked    = '';
+
+        if ( $has_cf ) {
+            $cf_id     = trim( $opts['on_cf_client_id'] );
+            $cf_secret = trim( $opts['on_cf_client_secret'] );
+
+            // CF-Access-Client-Id: 32 hex karakter + ".access".
+            $cf_id_format_ok = (bool) preg_match( '/^[0-9a-f]{32}\.access$/', $cf_id );
+            $cf_id_masked    = ( strlen( $cf_id ) > 12 )
+                ? substr( $cf_id, 0, 4 ) . str_repeat( '•', 12 ) . substr( $cf_id, -8 )
+                : str_repeat( '•', strlen( $cf_id ) );
+
+            // CF-Access-Client-Secret: 64 hex karakter.
+            $cf_secret_format_ok = (bool) preg_match( '/^[0-9a-f]{64}$/', $cf_secret );
+            $cf_secret_masked    = ( strlen( $cf_secret ) > 12 )
+                ? substr( $cf_secret, 0, 4 ) . str_repeat( '•', 12 ) . substr( $cf_secret, -8 )
+                : str_repeat( '•', strlen( $cf_secret ) );
+        }
+
         $debug = [
-            'on_url'                => rtrim( $opts['open_notebook_url'], '/' ),
-            'cf_access_configured'  => $has_cf,
-            'elapsed_ms'            => $elapsed,
+            'on_url'                  => rtrim( $opts['open_notebook_url'], '/' ),
+            'cf_access_configured'    => $has_cf,
+            'cf_id_format_ok'         => $cf_id_format_ok,
+            'cf_id_present_masked'    => $cf_id_masked,
+            'cf_secret_format_ok'     => $cf_secret_format_ok,
+            'cf_secret_present_masked'=> $cf_secret_masked,
+            'elapsed_ms'              => $elapsed,
         ];
 
         if ( is_wp_error( $notebooks ) ) {
@@ -280,6 +308,28 @@ class RestController {
                 ],
                 'debug' => $debug,
             ] );
+        }
+
+        // Format uyarısı: bağlantı çalışsa bile hatalı format kullanıcıya bildirilir.
+        $format_warnings = [];
+        if ( $has_cf ) {
+            if ( ! $cf_id_format_ok ) {
+                $format_warnings[] = sprintf(
+                    /* translators: %s: actual format hint */
+                    __( 'CF Access Client ID beklenen formatta değil (32 hex karakter + ".access" son eki, örn. %s). Kopyaladığınız değerden ".access" kısmını atlamamış olun.', 'smart-assistant' ),
+                    '<code>abcdef…32hex.access</code>'
+                );
+            }
+            if ( ! $cf_secret_format_ok ) {
+                $format_warnings[] = sprintf(
+                    /* translators: %s: actual format hint */
+                    __( 'CF Access Client Secret beklenen formatta değil (64 hex karakter, örn. %s).', 'smart-assistant' ),
+                    '<code>abcdef0123…64hex</code>'
+                );
+            }
+        }
+        if ( ! empty( $format_warnings ) ) {
+            $debug['format_warnings'] = $format_warnings;
         }
 
         $count = is_array( $notebooks ) ? count( $notebooks ) : 0;
