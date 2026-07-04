@@ -191,6 +191,28 @@ class Settings {
             );
         }
 
+        // === KRİTİK DEBUG: bir option kaydedildi mi, kaydedilmedi mi? ===
+        // Aşağıdaki 1 ifadeleri geçici: mevcut DB snapshot + sanitize giriş-çıkış
+        // değerlerini WP option'a yazarız. Sonra WP Admin > Ayarlar > Test
+        // kısmından görebilirsin veya https://site.com/wp-admin/options.php
+        // üzerinden smart_assistant_debug_save alanına bakabilirsin.
+        if ( is_array( $input ) && ! empty( $input['_save_debug_marker'] ) ) {
+            // Marker inputtan kaldırılır; sadece debug için geçici.
+            unset( $input['_save_debug_marker'] );
+        }
+        // Geçici debug snapshot: sanitize'ın EN SONUNA taşınacak; burada sadece girişi logla.
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            update_option( 'smart_assistant_debug_save_in', wp_json_encode( [
+                'keys'           => is_array( $input ) ? array_keys( $input ) : null,
+                'mode_in'        => $input['mode']       ?? null,
+                'ai_tone_in'     => $input['ai_tone']    ?? null,
+                'tools_in_count' => is_array( $input['tools'] ?? null ) ? count( $input['tools'] ) : 0,
+                'cf_id_in_len'   => strlen( $input['on_cf_client_id']     ?? '' ),
+                'cf_secret_in_len'=> strlen( $input['on_cf_client_secret']?? '' ),
+                'time'           => date( 'c' ),
+            ] ), false );
+        }
+
         $out['mode'] = in_array( $input['mode'] ?? 'simple', [ 'simple', 'open_notebook' ], true ) ? $input['mode'] : 'simple';
 
         // Provider whitelist.
@@ -272,6 +294,22 @@ class Settings {
                 ];
             }
             $out['tools'] = $sanitized_tools;
+        }
+
+        // === KRİTİK DEBUG: sanitize çıktı snapshot'ı ===
+        // Bu option'a bakarak "kaydet dediğim anda gerçekten ne döndü" sorusunu
+        // cevaplayabiliriz. WP Admin > options.php URL'i üzerinden
+        // 'smart_assistant_debug_save_out' alanına bak.
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+            update_option( 'smart_assistant_debug_save_out', wp_json_encode( [
+                'keys'           => array_keys( (array) $out ),
+                'mode_out'       => $out['mode']       ?? null,
+                'ai_tone_out'    => $out['ai_tone']    ?? null,
+                'tools_out_count'=> isset( $out['tools'] ) && is_array( $out['tools'] ) ? count( $out['tools'] ) : 0,
+                'cf_id_out_len'  => strlen( $out['on_cf_client_id']     ?? '' ),
+                'cf_secret_out_len'=> strlen( $out['on_cf_client_secret']?? '' ),
+                'time'           => date( 'c' ),
+            ] ), false );
         }
 
         add_settings_error( 'smart_assistant_options', 'smart_assistant_saved', __( 'Ayarlar kaydedildi.', 'smart-assistant' ), 'updated' );

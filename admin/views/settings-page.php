@@ -434,6 +434,9 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) :
         $len = strlen( $v );
         return $len <= 8 ? str_repeat( '•', $len ) : substr( $v, 0, 4 ) . str_repeat( '•', 8 ) . substr( $v, -4 ) . ' (len=' . $len . ')';
     };
+    $save_in_dbg  = get_option( 'smart_assistant_debug_save_in',  null );
+    $save_out_dbg = get_option( 'smart_assistant_debug_save_out', null );
+
     $snapshot = [
         'raw_db_keys'   => is_array( $raw_dbg ) ? array_keys( $raw_dbg ) : null,
         'cooked_keys'   => is_array( $cooked_dbg ) ? array_keys( $cooked_dbg ) : null,
@@ -447,6 +450,8 @@ if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) :
         'cf_id_len'     => strlen( $cooked_dbg['on_cf_client_id']     ?? '' ),
         'cf_secret_len' => strlen( $cooked_dbg['on_cf_client_secret'] ?? '' ),
         'masked'        => array_intersect_key( $cooked_dbg, array_flip( $mask_keys ) ),
+        'save_in'       => $save_in_dbg,   // sanitize() GİRİŞ snapshot
+        'save_out'      => $save_out_dbg,  // sanitize() ÇIKIŞ snapshot
     ];
     foreach ( $mask_keys as $k ) {
         if ( isset( $snapshot['masked'][ $k ] ) ) {
