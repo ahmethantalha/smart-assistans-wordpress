@@ -108,6 +108,75 @@
             $status.removeClass( 'is-visible' ).text( '' );
         } );
 
+        // Alternatif: "REST ile Kaydet" butonu — options.php'yi bypass eder.
+        // WP options.php akışı bozukken veya "kaydettim ama değişmedi" izlenimi
+        // olduğunda buradan deneyebilirsin. JSON olarak tüm form datasını gönderir.
+        $( '#smart-assistant-save-rest' ).on( 'click', function () {
+            $btn.addClass( 'is-saving' );
+            $status.removeClass( 'is-visible' ).text( 'REST ile kaydediliyor…' );
+
+            // form.serializeArray() nested array için [foo][bar] formatında name üretir.
+            // PHP bunu doğrudan $_POST nested array olarak parse eder. Bunu JSON'a çevirirken
+            // aynı yapıyı korumalıyız — yoksa sanitize bozulur.
+            const formData = $form.serializeArray();
+            const payload = {};
+            formData.forEach( ( f ) => {
+                // name "smart_assistant_options[key]" veya "smart_assistant_options[key][sub][…]"
+                const m = f.name.match( /^smart_assistant_options\[(.+?)\](.*)$/ );
+                if ( ! m ) return;
+                const topKey = m[1];
+                const rest = m[2]; // '[sub]' veya ''
+
+                if ( ! payload[ topKey ] ) {
+                    payload[ topKey ] = rest ? {} : f.value;
+                }
+
+                if ( rest ) {
+                    // '[0][key]' gibi iç içe path'i parse et.
+                    const path = [];
+                    rest.replace( /\[([^\]]*)\]/g, ( _, k ) => path.push( k ) );
+                    let cur = payload[ topKey ];
+                    for ( let i = 0; i < path.length; i++ ) {
+                        const k = path[ i ];
+                        if ( i === path.length - 1 ) {
+                            cur[ k ] = f.value;
+                        } else {
+                            if ( ! cur[ k ] || typeof cur[ k ] !== 'object' ) cur[ k ] = {};
+                            cur = cur[ k ];
+                        }
+                    }
+                }
+            } );
+
+            $.ajax( {
+                url: ( window.SmartAssistantAdmin.restUrl || '/wp-json/smart-assistant/v1' ) + '/save-options',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify( payload ),
+                headers: {
+                    'X-WP-Nonce': ( window.SmartAssistantAdmin && window.SmartAssistantAdmin.nonce ) || '',
+                },
+                success: function ( data ) {
+                    if ( data && data.ok ) {
+                        $status.text( '✓ REST ile kaydedildi (tools=' + ( data.tools_after ?? '?' ) +
+                            ', mode=' + ( data.mode_after ?? '?' ) +
+                            ', cf_id_len=' + ( data.cf_id_len ?? 0 ) + '). Sayfa yenileniyor…' ).addClass( 'is-visible' );
+                        setTimeout( function () { location.reload(); }, 800 );
+                    } else {
+                        $status.text( '✗ REST kayıt başarısız (response: ' + JSON.stringify( data || {} ) + ')' ).addClass( 'is-visible' );
+                        $btn.removeClass( 'is-saving' );
+                    }
+                },
+                error: function ( xhr ) {
+                    let msg = 'HTTP ' + xhr.status;
+                    try { const body = JSON.parse( xhr.responseText ); if ( body && body.message ) msg = body.message; } catch (e) {}
+                    $status.text( '✗ REST hata: ' + msg ).addClass( 'is-visible' );
+                    $btn.removeClass( 'is-saving' );
+                },
+            } );
+        } );
+    } );
+
         // Sayfa yüklendiğinde: eğer settings_errors notice'ı varsa "Kaydedildi" göster.
         $( function () {
             if ( $( '.notice.notice-success.is-dismissible' ).length ) {

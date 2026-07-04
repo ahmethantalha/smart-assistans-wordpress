@@ -74,6 +74,24 @@ class RestController {
             },
         ] );
 
+        // DEBUG: Form datasını alıp sanitize sonucunu döndür (DB'ye yazmadan).
+        register_rest_route( self::NAMESPACE_V1, '/dry-save', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_dry_save' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+        ] );
+
+        // REST üzerinden doğrudan save — options.php'yi bypass eder.
+        register_rest_route( self::NAMESPACE_V1, '/save-options', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_save_options' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+        ] );
+
         register_rest_route( self::NAMESPACE_V1, '/chat', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'handle_chat' ],
@@ -409,6 +427,144 @@ class RestController {
         }
 
         return rest_ensure_response( $snapshot );
+    }
+
+    /**
+     * /dry-save endpoint'i — form datasını alır, sanitize eder, sonucu DB'ye yazmadan döndürür.
+     *
+     * "Ayarları kaydet" butonu gerçekten çalışıyor mu sorusunun cevabını doğrudan verir.
+     * Hassas alanlar maskelenir.
+     */
+    public function handle_dry_save( \WP_REST_Request $request ) {
+        $input = $request->get_json_params();
+        if ( empty( $input ) ) {
+            // JSON değilse form-encoded olabilir.
+            $input = $request->get_body_params();
+        }
+
+        $mask = function ( $v ) {
+            if ( ! is_string( $v ) || '' === $v ) return $v;
+            $len = strlen( $v );
+            return $len <= 8 ? str_repeat( '•', $len ) : substr( $v, 0, 4 ) . str_repeat( '•', 8 ) . substr( $v, -4 ) . ' (len=' . $len . ')';
+        };
+
+        $received_keys = is_array( $input ) ? array_keys( $input ) : [];
+        $received_summary = [
+            'field_count'      => count( $received_keys ),
+            'mode'             => $input['mode'] ?? null,
+            'ai_tone'          => $input['ai_tone'] ?? null,
+            'tools_submitted'  => ! empty( $input['tools_submitted'] ),
+            'tools_row_count'  => is_array( $input['tools'] ?? null ) ? count( $input['tools'] ) : 0,
+            'cf_id_len'        => strlen( $input['on_cf_client_id']     ?? '' ),
+            'cf_secret_len'    => strlen( $input['on_cf_client_secret'] ?? '' ),
+            'sample_keys'      => array_slice( $received_keys, 0, 15 ),
+        ];
+
+        if ( ! is_array( $input ) || empty( $input ) ) {
+            return new \WP_REST_Response( [
+                'ok'             => false,
+                'received'       => $received_summary,
+                'sanitized_keys' => [],
+                'sanitized_preview' => [],
+                'error'          => 'Boş veya hatalı input.',
+            ], 400 );
+        }
+
+        // Sanitize çalıştır.
+        $settings = \SmartAssistant\Plugin::instance()->settings;
+        $sanitized = $settings->sanitize( $input );
+
+        $keys_to_mask = [ 'api_key', 'group_id', 'on_cf_client_id', 'on_cf_client_secret' ];
+
+        // Dönen değerin önizlemesi (hassas maskelenmiş).
+        $preview = [];
+        foreach ( $sanitized as $k => $v ) {
+            $row = [ 'type' => gettype( $v ) ];
+            if ( is_string( $v ) ) {
+                $row['len']   = strlen( $v );
+                $row['value'] = in_array( $k, $keys_to_mask, true ) ? $mask( $v ) : ( strlen( $v ) > 80 ? substr( $v, 0, 80 ) . '…' : $v );
+            } elseif ( is_array( $v ) ) {
+                $row['count'] = count( $v );
+                if ( isset( $v[0]['key'] ) ) {
+                    $row['keys'] = array_map( fn( $t ) => $t['key'] ?? '?', $v );
+                } elseif ( 'tools' === $k ) {
+                    $row['keys'] = array_map( fn( $t ) => is_array( $t ) ? ( $t['key'] ?? '' ) : '', $v );
+                } else {
+                    $row['values'] = array_map( fn( $x ) => is_scalar( $x ) ? (string) $x : '[…]', $v );
+                }
+            } elseif ( is_bool( $v ) ) {
+                $row['bool'] = $v;
+            } elseif ( is_numeric( $v ) ) {
+                $row['value'] = $v;
+            } else {
+                $row['value'] = is_scalar( $v ) ? (string) $v : '[object]';
+            }
+            $preview[ $k ] = $row;
+        }
+
+        return rest_ensure_response( [
+            'ok'                  => true,
+            'received'            => $received_summary,
+            'sanitized_keys'      => array_keys( $sanitized ),
+            'sanitized_preview'   => $preview,
+            // DB yazma yok — sadece döndür.
+            'persisted'           => false,
+        ] );
+    }
+
+    /**
+     * /save-options endpoint'i — sanitize + update_option doğrudan REST üzerinden.
+     *
+     * Bu, options.php akışı herhangi bir nedenle kapalıysa veya sanitize çalışmıyor
+     * izlenimi varsa bypass yolu olarak kullanılır. JS tarafı form submit'ini yakalayıp
+     * bu endpoint'e POST'lar.
+     */
+    public function handle_save_options( \WP_REST_Request $request ) {
+        $input = $request->get_json_params();
+        if ( empty( $input ) ) {
+            $input = $request->get_body_params();
+        }
+
+        if ( ! is_array( $input ) || empty( $input ) ) {
+            return new \WP_REST_Response( [
+                'ok'    => false,
+                'error' => 'Boş veya hatalı input.',
+            ], 400 );
+        }
+
+        $settings = \SmartAssistant\Plugin::instance()->settings;
+        $sanitized = $settings->sanitize( $input );
+
+        if ( ! is_array( $sanitized ) ) {
+            return new \WP_REST_Response( [
+                'ok'    => false,
+                'error' => 'Sanitize başarısız oldu, array dönmedi.',
+            ], 500 );
+        }
+
+        $result = update_option( 'smart_assistant_options', $sanitized );
+
+        if ( ! $result ) {
+            // update_option false dönerse: option mevcut değilse add etmeyi de dene.
+            if ( false === get_option( 'smart_assistant_options' ) ) {
+                $result = add_option( 'smart_assistant_options', $sanitized );
+            }
+        }
+
+        // Yazma sonrası gerçekten DB'de olan:
+        $after = get_option( 'smart_assistant_options', [] );
+
+        return rest_ensure_response( [
+            'ok'             => (bool) $result,
+            'persisted'      => (bool) $result,
+            'keys_after'     => is_array( $after ) ? array_keys( $after ) : null,
+            'mode_after'     => is_array( $after ) ? ( $after['mode'] ?? null ) : null,
+            'tools_after'    => is_array( $after ) && isset( $after['tools'] ) && is_array( $after['tools'] )
+                ? count( $after['tools'] )
+                : null,
+            'cf_id_len'      => is_array( $after ) ? strlen( $after['on_cf_client_id']     ?? '' ) : null,
+            'cf_secret_len'  => is_array( $after ) ? strlen( $after['on_cf_client_secret'] ?? '' ) : null,
+        ] );
     }
 
     /**
