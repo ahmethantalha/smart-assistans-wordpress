@@ -418,3 +418,45 @@ $sections = [
         </section>
     </main>
 </div>
+
+<?php
+// === DEBUG PANEL — sadece WP_DEBUG modunda görünür ===
+// Save sonrası DB'de ne yazıldığını canlı kontrol için.
+if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) :
+    $raw_dbg = get_option( 'smart_assistant_options', [] );
+    $cooked_dbg = smart_assistant_get_options();
+    $mask_keys  = [ 'api_key', 'group_id', 'on_cf_client_id', 'on_cf_client_secret' ];
+    $mask_fn = function ( $v ) {
+        if ( ! is_string( $v ) || '' === $v ) return $v;
+        $len = strlen( $v );
+        return $len <= 8 ? str_repeat( '•', $len ) : substr( $v, 0, 4 ) . str_repeat( '•', 8 ) . substr( $v, -4 ) . ' (len=' . $len . ')';
+    };
+    $snapshot = [
+        'raw_db_keys'   => is_array( $raw_dbg ) ? array_keys( $raw_dbg ) : null,
+        'cooked_keys'   => is_array( $cooked_dbg ) ? array_keys( $cooked_dbg ) : null,
+        'mode'          => $cooked_dbg['mode'] ?? 'N/A',
+        'ai_tone'       => $cooked_dbg['ai_tone'] ?? 'N/A',
+        'tools_count'   => isset( $cooked_dbg['tools'] ) && is_array( $cooked_dbg['tools'] ) ? count( $cooked_dbg['tools'] ) : 0,
+        'tool_keys'     => isset( $cooked_dbg['tools'] ) && is_array( $cooked_dbg['tools'] )
+            ? array_values( array_filter( array_map( fn( $t ) => is_array( $t ) ? ( $t['key'] ?? '' ) : '', $cooked_dbg['tools'] ) ) )
+            : [],
+        'on_url'        => $cooked_dbg['open_notebook_url'] ?? '',
+        'cf_id_len'     => strlen( $cooked_dbg['on_cf_client_id']     ?? '' ),
+        'cf_secret_len' => strlen( $cooked_dbg['on_cf_client_secret'] ?? '' ),
+        'masked'        => array_intersect_key( $cooked_dbg, array_flip( $mask_keys ) ),
+    ];
+    foreach ( $mask_keys as $k ) {
+        if ( isset( $snapshot['masked'][ $k ] ) ) {
+            $snapshot['masked'][ $k ] = $mask_fn( $snapshot['masked'][ $k ] );
+        }
+    }
+    ?>
+    <div style="position:fixed;bottom:0;left:0;right:0;max-height:40vh;overflow:auto;background:#0f172a;color:#e2e8f0;font-family:ui-monospace,Menlo,monospace;font-size:11px;padding:10px 14px;border-top:2px solid #6366f1;z-index:99999;box-shadow:0 -4px 12px rgba(0,0,0,0.4);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong style="color:#fbbf24;">⚙️ SMART ASSISTANT DEBUG SNAPSHOT (WP_DEBUG açık)</strong>
+            <span style="color:#94a3b8;">Bu panel sadece hata ayıklama için — production'da WP_DEBUG kapatınca kaybolur.</span>
+        </div>
+        <pre style="margin:0;white-space:pre-wrap;"><?php echo esc_html( print_r( $snapshot, true ) ); ?></pre>
+    </div>
+    <?php
+endif;
