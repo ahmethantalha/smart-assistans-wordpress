@@ -92,6 +92,15 @@ class RestController {
             },
         ] );
 
+        // Veritabanı tanılama ve onarım — option'ı sıfırdan yazar.
+        register_rest_route( self::NAMESPACE_V1, '/repair-options', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_repair_options' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+        ] );
+
         register_rest_route( self::NAMESPACE_V1, '/chat', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'handle_chat' ],
@@ -565,6 +574,252 @@ class RestController {
             'cf_id_len'      => is_array( $after ) ? strlen( $after['on_cf_client_id']     ?? '' ) : null,
             'cf_secret_len'  => is_array( $after ) ? strlen( $after['on_cf_client_secret'] ?? '' ) : null,
         ] );
+    }
+    /**
+     * /repair-options endpoint'i — veritabanı tanılama ve onarım.
+     *
+     * 1) Option'ın DB'de var olup olmadığını kontrol eder.
+     * 2) Serializasyon bütünlüğünü doğrular.
+     * 3) Ham DB yazma testi yapar ($wpdb direkt).
+     * 4) İstenirse option'ı siler ve varsayılanlarla yeniden oluşturur.
+     *
+     * Tüm işlemler WP object cache'ini bypass eder.
+     */
+    public function handle_repair_options( \WP_REST_Request $request ) {
+        global $wpdb;
+
+        $action = sanitize_key( $request->get_param( 'action' ) ?? 'diagnose' );
+        $report = [
+            'action'    => $action,
+            'steps'     => [],
+            'ok'        => false,
+            'db_error'  => null,
+        ];
+
+        // Adım 1: Option DB'de var mı?
+        $table = $wpdb->options;
+        $row   = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT option_id, LENGTH(option_value) AS val_length, autoload FROM {$table} WHERE option_name = %s",
+                'smart_assistant_options'
+            )
+        );
+
+        if ( $row ) {
+            $report['steps'][] = [
+                'step'       => 'option_exists',
+                'ok'         => true,
+                'option_id'  => (int) $row->option_id,
+                'val_length' => (int) $row->val_length,
+                'autoload'   => $row->autoload,
+            ];
+        } else {
+            $report['steps'][] = [
+                'step' => 'option_exists',
+                'ok'   => false,
+                'msg'  => 'Option DB\'de bulunamadı.',
+            ];
+        }
+
+        // Adım 2: Serializasyon bütünlüğü kontrolü.
+        if ( $row ) {
+            $raw_val = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT option_value FROM {$table} WHERE option_name = %s",
+                    'smart_assistant_options'
+                )
+            );
+            $unserialized = maybe_unserialize( $raw_val );
+            $is_valid     = is_array( $unserialized );
+            $report['steps'][] = [
+                'step'            => 'serialization_check',
+                'ok'              => $is_valid,
+                'raw_starts_with' => substr( $raw_val ?? '', 0, 30 ),
+                'unserialized_type' => gettype( $unserialized ),
+                'key_count'       => $is_valid ? count( $unserialized ) : 0,
+                'msg'             => $is_valid ? 'Serializasyon geçerli.' : 'BOZUK! Unserialize array döndürmedi.',
+            ];
+        }
+
+        // Adım 3: WP update_option testi (küçük test değeri yaz, sonra geri al).
+        $test_key = 'smart_assistant_write_test';
+        $test_val = [ '_test' => wp_generate_password( 8, false ), '_time' => time() ];
+        $write_ok = update_option( $test_key, $test_val );
+        $read_back = get_option( $test_key );
+        $read_ok   = is_array( $read_back ) && ( $read_back['_test'] ?? '' ) === $test_val['_test'];
+        delete_option( $test_key );
+
+        $report['steps'][] = [
+            'step'     => 'write_test',
+            'ok'       => $write_ok && $read_ok,
+            'write_ok' => $write_ok,
+            'read_ok'  => $read_ok,
+            'msg'      => ( $write_ok && $read_ok )
+                ? 'DB yazma/okuma çalışıyor.'
+                : 'DB yazma/okuma BAŞARISIZ! last_error: ' . ( $wpdb->last_error ?: 'yok' ),
+        ];
+
+        // Adım 4: Asıl option'a doğrudan yazma testi.
+        if ( $row ) {
+            wp_cache_delete( 'smart_assistant_options', 'options' );
+            $current = get_option( 'smart_assistant_options', [] );
+            // Aynı değeri tekrar yazarak update_option davranışını test et.
+            $direct_write = $wpdb->update(
+                $table,
+                [ 'option_value' => maybe_serialize( $current ) ],
+                [ 'option_name' => 'smart_assistant_options' ],
+                [ '%s' ],
+                [ '%s' ]
+            );
+            $report['steps'][] = [
+                'step'     => 'direct_write_test',
+                'ok'       => false !== $direct_write,
+                'affected' => $direct_write,
+                'db_error' => $wpdb->last_error ?: null,
+                'msg'      => false !== $direct_write
+                    ? 'Doğrudan DB yazma başarılı.'
+                    : 'Doğrudan DB yazma BAŞARISIZ: ' . $wpdb->last_error,
+            ];
+        }
+
+        // === ONARIM AKSIYONLARI ===
+        if ( 'reset' === $action ) {
+            // Option'ı sil ve varsayılanlarla yeniden oluştur.
+            $deleted = delete_option( 'smart_assistant_options' );
+            wp_cache_delete( 'smart_assistant_options', 'options' );
+            wp_cache_delete( 'alloptions', 'options' );
+
+            // Varsayılan değerlerle yeniden oluştur (smart_assistant_get_options defaults).
+            $defaults = [
+                'mode'              => 'simple',
+                'provider'          => 'MiniMax',
+                'api_key'           => '',
+                'group_id'          => '',
+                'api_base_url'      => 'https://api.minimax.io/v1',
+                'model'             => 'MiniMax-M3',
+                'system_prompt'     => '',
+                'temperature'       => 0.2,
+                'max_tokens'        => 800,
+                'post_types'        => [ 'post', 'page' ],
+                'max_results'       => 5,
+                'max_content_chars' => 6000,
+                'rate_limit_per_min' => 20,
+                'open_notebook_url' => '',
+                'open_notebook_notebook_id' => '',
+                'on_strategy_model'   => '',
+                'on_answer_model'     => '',
+                'on_final_answer_model' => '',
+                'on_cf_client_id'     => '',
+                'on_cf_client_secret' => '',
+                'enable_abilities'  => true,
+                'ai_name'         => '',
+                'ai_greeting'     => '',
+                'ai_tone'         => 'friendly',
+                'ai_examples'     => '',
+                'show_signature'  => false,
+            ];
+
+            $added = add_option( 'smart_assistant_options', $defaults, '', 'yes' );
+            wp_cache_delete( 'smart_assistant_options', 'options' );
+            wp_cache_delete( 'alloptions', 'options' );
+
+            // Doğrulama: gerçekten yazıldı mı?
+            $verify = $wpdb->get_var(
+                $wpdb->prepare(
+                    "SELECT LENGTH(option_value) FROM {$table} WHERE option_name = %s",
+                    'smart_assistant_options'
+                )
+            );
+
+            $report['steps'][] = [
+                'step'        => 'reset',
+                'deleted'     => $deleted,
+                'added'       => $added,
+                'verify_len'  => (int) $verify,
+                'db_error'    => $wpdb->last_error ?: null,
+                'ok'          => $added && $verify > 0,
+                'msg'         => ( $added && $verify > 0 )
+                    ? 'Option sıfırlandı ve varsayılanlarla yeniden oluşturuldu.'
+                    : 'Sıfırlama BAŞARISIZ: ' . ( $wpdb->last_error ?: 'Bilinmeyen hata' ),
+            ];
+        } elseif ( 'force_save' === $action ) {
+            // Mevcut form datasını al ve doğrudan $wpdb ile yaz (tüm WP katmanlarını bypass).
+            $input = $request->get_json_params();
+            if ( is_array( $input ) && ! empty( $input ) ) {
+                // 'action' key'ini formdan kaldır.
+                unset( $input['action'] );
+
+                $settings  = \SmartAssistant\Plugin::instance()->settings;
+                $sanitized = $settings->sanitize( $input );
+
+                if ( is_array( $sanitized ) && ! empty( $sanitized ) ) {
+                    $serialized = maybe_serialize( $sanitized );
+
+                    // Option yoksa INSERT, varsa UPDATE.
+                    if ( $row ) {
+                        $result = $wpdb->update(
+                            $table,
+                            [ 'option_value' => $serialized ],
+                            [ 'option_name' => 'smart_assistant_options' ],
+                            [ '%s' ],
+                            [ '%s' ]
+                        );
+                    } else {
+                        $result = $wpdb->insert(
+                            $table,
+                            [
+                                'option_name'  => 'smart_assistant_options',
+                                'option_value' => $serialized,
+                                'autoload'     => 'yes',
+                            ],
+                            [ '%s', '%s', '%s' ]
+                        );
+                    }
+
+                    // Cache'i temizle.
+                    wp_cache_delete( 'smart_assistant_options', 'options' );
+                    wp_cache_delete( 'alloptions', 'options' );
+
+                    $report['steps'][] = [
+                        'step'        => 'force_save',
+                        'ok'          => false !== $result,
+                        'affected'    => $result,
+                        'serial_len'  => strlen( $serialized ),
+                        'db_error'    => $wpdb->last_error ?: null,
+                        'mode_saved'  => $sanitized['mode'] ?? null,
+                        'keys_saved'  => count( $sanitized ),
+                        'msg'         => false !== $result
+                            ? 'Doğrudan DB yazma (force_save) başarılı.'
+                            : 'Force save BAŞARISIZ: ' . ( $wpdb->last_error ?: 'Bilinmeyen hata' ),
+                    ];
+                } else {
+                    $report['steps'][] = [
+                        'step' => 'force_save',
+                        'ok'   => false,
+                        'msg'  => 'Sanitize sonrası boş/geçersiz çıktı.',
+                    ];
+                }
+            } else {
+                $report['steps'][] = [
+                    'step' => 'force_save',
+                    'ok'   => false,
+                    'msg'  => 'Form datası boş geldi.',
+                ];
+            }
+        }
+
+        // Genel sonuç.
+        $all_ok = true;
+        foreach ( $report['steps'] as $s ) {
+            if ( ! ( $s['ok'] ?? false ) ) {
+                $all_ok = false;
+                break;
+            }
+        }
+        $report['ok']       = $all_ok;
+        $report['db_error'] = $wpdb->last_error ?: null;
+
+        return rest_ensure_response( $report );
     }
 
     /**

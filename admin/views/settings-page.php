@@ -88,6 +88,10 @@ $sections = [
                 <span class="sa-nav-icon" aria-hidden="true">ℹ️</span>
                 <?php esc_html_e( 'Bilgi', 'smart-assistant' ); ?>
             </a>
+            <a href="#section-repair"   class="sa-nav-link" data-target="section-repair">
+                <span class="sa-nav-icon" aria-hidden="true">🔧</span>
+                <?php esc_html_e( 'DB Onarım', 'smart-assistant' ); ?>
+            </a>
         </nav>
 
         <div class="sa-status-card">
@@ -419,6 +423,101 @@ $sections = [
                 </div>
             </div>
         </section>
+
+        <section id="section-repair" class="sa-card" data-section="repair">
+            <div class="sa-card-head">
+                <div>
+                    <h2 class="sa-card-title"><?php esc_html_e( 'Veritabanı Onarım', 'smart-assistant' ); ?></h2>
+                    <p class="sa-card-sub"><?php esc_html_e( 'Ayarlar kaydedilmiyorsa, veritabanındaki option satırını tanılayın ve onarın.', 'smart-assistant' ); ?></p>
+                </div>
+                <span class="sa-badge sa-badge-warn">🔧</span>
+            </div>
+            <div class="sa-card-body">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px;">
+                    <button type="button" id="sa-repair-diagnose" class="sa-btn sa-btn-secondary">
+                        🔍 <?php esc_html_e( 'Tanıla (Diagnose)', 'smart-assistant' ); ?>
+                    </button>
+                    <button type="button" id="sa-repair-reset" class="sa-btn sa-btn-ghost" style="color:var(--sa-red-500, #ef4444); border-color:var(--sa-red-500, #ef4444);">
+                        🗑️ <?php esc_html_e( 'Sıfırla & Yeniden Oluştur', 'smart-assistant' ); ?>
+                    </button>
+                    <button type="button" id="sa-repair-force-save" class="sa-btn sa-btn-secondary">
+                        💾 <?php esc_html_e( 'Force Save (DB Direkt)', 'smart-assistant' ); ?>
+                    </button>
+                </div>
+                <p class="description" style="margin-bottom:12px;">
+                    <?php esc_html_e( '• Tanıla: Option\'ın DB\'de var olup olmadığını, serializasyon bütünlüğünü ve yazma yeteneğini kontrol eder.', 'smart-assistant' ); ?><br>
+                    <?php esc_html_e( '• Sıfırla: Mevcut option\'ı siler ve varsayılan değerlerle sıfırdan oluşturur. API anahtarınız silinir!', 'smart-assistant' ); ?><br>
+                    <?php esc_html_e( '• Force Save: Formdaki mevcut değerleri WP\'yi atlayarak doğrudan $wpdb ile veritabanına yazar.', 'smart-assistant' ); ?>
+                </p>
+                <pre id="sa-repair-result" style="background:#1e293b; color:#e2e8f0; padding:14px; border-radius:8px; font-size:12px; max-height:400px; overflow:auto; display:none; white-space:pre-wrap;"></pre>
+            </div>
+        </section>
+
+        <script>
+        (function($){
+            var restUrl = <?php echo wp_json_encode( esc_url_raw( rest_url( 'smart-assistant/v1' ) ) ); ?>;
+            var nonce   = <?php echo wp_json_encode( wp_create_nonce( 'wp_rest' ) ); ?>;
+            var $result = $('#sa-repair-result');
+
+            function repairCall(action, extraData) {
+                $result.show().text('⏳ İşlem devam ediyor…');
+                var payload = extraData || {};
+                payload.action = action;
+                $.ajax({
+                    url: restUrl + '/repair-options',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(payload),
+                    headers: { 'X-WP-Nonce': nonce },
+                    success: function(data) {
+                        $result.text(JSON.stringify(data, null, 2));
+                        if (data.ok) {
+                            $result.css('border-left', '4px solid #22c55e');
+                        } else {
+                            $result.css('border-left', '4px solid #ef4444');
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = 'HTTP ' + xhr.status;
+                        try { msg += ': ' + JSON.parse(xhr.responseText).message; } catch(e){}
+                        $result.text('❌ ' + msg).css('border-left', '4px solid #ef4444');
+                    }
+                });
+            }
+
+            $('#sa-repair-diagnose').on('click', function(){ repairCall('diagnose'); });
+
+            $('#sa-repair-reset').on('click', function(){
+                if (!confirm('DİKKAT: Tüm eklenti ayarları (API anahtarı dahil) silinip varsayılanlara dönecek. Devam?')) return;
+                repairCall('reset');
+            });
+
+            $('#sa-repair-force-save').on('click', function(){
+                // Mevcut formdaki verileri topla.
+                var formData = $('#smart-assistant-form').serializeArray();
+                var payload = {};
+                formData.forEach(function(f){
+                    var m = f.name.match(/^smart_assistant_options\[(.+?)\](.*)$/);
+                    if (!m) return;
+                    var topKey = m[1], rest = m[2];
+                    if (!rest) {
+                        payload[topKey] = f.value;
+                        return;
+                    }
+                    if (!payload[topKey] || typeof payload[topKey] !== 'object') payload[topKey] = {};
+                    var path = [];
+                    rest.replace(/\[([^\]]*)\]/g, function(_, k){ path.push(k); });
+                    var cur = payload[topKey];
+                    for (var i = 0; i < path.length; i++) {
+                        var k = path[i];
+                        if (i === path.length - 1) { cur[k] = f.value; }
+                        else { if (!cur[k] || typeof cur[k] !== 'object') cur[k] = {}; cur = cur[k]; }
+                    }
+                });
+                repairCall('force_save', payload);
+            });
+        })(jQuery);
+        </script>
     </main>
 </div>
 
