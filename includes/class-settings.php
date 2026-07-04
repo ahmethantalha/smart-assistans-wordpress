@@ -146,6 +146,24 @@ class Settings {
     public function sanitize( $input ) {
         $out = smart_assistant_get_options();
 
+        // === Debug: gelen input'un anahtarlarını logla ===
+        // Üretimde kapatmak için WP_DEBUG kontrolü yeterli; debug.log aktifken
+        // burada hangi field'ların geldiğini net görürüz (tools_submitted, mode, ai_tone vs.).
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG && is_array( $input ) ) {
+            $keys   = array_keys( $input );
+            $tools  = isset( $input['tools'] ) && is_array( $input['tools'] ) ? count( $input['tools'] ) : 0;
+            smart_assistant_log(
+                'sanitize başladı. Gelen field sayısı: ' . count( $keys ) .
+                ' | mode=' . ( $input['mode'] ?? 'N/A' ) .
+                ' | ai_tone=' . ( $input['ai_tone'] ?? 'N/A' ) .
+                ' | tools_submitted=' . ( ! empty( $input['tools_submitted'] ) ? '1 (' . $tools . ' rows)' : '0' ) .
+                ' | cf_id_len=' . strlen( $input['on_cf_client_id'] ?? '' ) .
+                ' | cf_secret_len=' . strlen( $input['on_cf_client_secret'] ?? '' ) .
+                ' | first 12 keys: ' . implode( ',', array_slice( $keys, 0, 12 ) ),
+                'debug'
+            );
+        }
+
         $out['mode'] = in_array( $input['mode'] ?? 'simple', [ 'simple', 'open_notebook' ], true ) ? $input['mode'] : 'simple';
 
         // Provider whitelist.
