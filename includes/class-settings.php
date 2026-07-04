@@ -84,11 +84,13 @@ class Settings {
     }
 
     public function register_settings() {
+        // type => 'object' çünkü PHP associative array = JSON object.
+        // 'array' kullanınca WP 7.0 JSON Schema validation'da reddediyor.
         register_setting(
             'smart_assistant_settings_group',
             'smart_assistant_options',
             [
-                'type'              => 'array',
+                'type'              => 'object',
                 'sanitize_callback' => [ $this, 'sanitize' ],
                 'default'           => smart_assistant_get_options(),
             ]
