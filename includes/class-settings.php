@@ -12,8 +12,35 @@ class Settings {
 
     public function register_hooks() {
         add_action( 'admin_init', [ $this, 'register_settings' ] );
+        // Manuel save fallback — options.php bazı ortamlarda sanitize sonrası
+        // update_option'ı sessizce başarısız bırakıyor. WP'nin kendi yazma
+        // akışından ÖNCE bu handler $_POST'a bakar, sanitize edip kendimiz
+        // update_option çağırıyoruz. option_page kontrolü sadece bizim
+        // form POST'larında çalıştığı için başka settings sayfalarına dokunmaz.
+        add_action( 'admin_init', [ $this, 'maybe_manual_save' ], 5 );
         add_action( 'admin_notices', [ $this, 'activation_notice' ] );
         add_action( 'admin_enqueue_scripts', [ $this, 'enqueue_admin_js' ] );
+    }
+
+    /**
+     * Eğer WP options.php akışı sanitize sonrası update_option'ı bypass edip
+     * başarısız oluyorsa, burada kendi update_option'ımızı çağırırız. WP core
+     * daha sonra da yazabilir; duplicate update zarar vermez (aynı değer).
+     */
+    public function maybe_manual_save() {
+        if ( empty( $_POST['option_page'] ) || 'smart_assistant_settings_group' !== $_POST['option_page'] ) {
+            return;
+        }
+        if ( empty( $_POST['smart_assistant_options'] ) || ! is_array( $_POST['smart_assistant_options'] ) ) {
+            return;
+        }
+        // check_admin_referer wp_die ile ölürse, no-cache header gönderir — biz sadece
+        // sanitize edip manuel yazıyoruz; WP'nin kendi redirect akışından ÖNCE çalışır.
+        $input = wp_unslash( $_POST['smart_assistant_options'] );
+        $sanitized = $this->sanitize( $input );
+        if ( is_array( $sanitized ) && ! empty( $sanitized ) ) {
+            update_option( 'smart_assistant_options', $sanitized );
+        }
     }
 
     public function enqueue_admin_js( $hook ) {
