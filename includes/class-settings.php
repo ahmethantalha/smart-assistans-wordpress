@@ -103,7 +103,7 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'mode', __( 'Mod', 'smart-assistant' ), 'render_mode_field' );
+        $this->add_field( 'mode', __( 'Mod', 'smart-assistant' ), 'render_mode_field', 'smart_assistant_mode' );
 
         add_settings_section(
             'smart_assistant_general',
@@ -114,14 +114,14 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'provider', __( 'AI Provider', 'smart-assistant' ), 'render_provider_field' );
-        $this->add_field( 'api_key', __( 'API Anahtarı / Token', 'smart-assistant' ), 'render_api_key_field' );
-        $this->add_field( 'group_id', __( 'Group ID (MiniMax Token Plan)', 'smart-assistant' ), 'render_group_id_field' );
-        $this->add_field( 'api_base_url', __( 'API Base URL', 'smart-assistant' ), 'render_api_base_url_field' );
-        $this->add_field( 'model', __( 'Model', 'smart-assistant' ), 'render_model_field' );
-        $this->add_field( 'system_prompt', __( 'Sistem Prompt\'u', 'smart-assistant' ), 'render_system_prompt_field' );
-        $this->add_field( 'temperature', __( 'Temperature', 'smart-assistant' ), 'render_temperature_field' );
-        $this->add_field( 'max_tokens', __( 'Max Tokens', 'smart-assistant' ), 'render_max_tokens_field' );
+        $this->add_field( 'provider', __( 'AI Provider', 'smart-assistant' ), 'render_provider_field', 'smart_assistant_general' );
+        $this->add_field( 'api_key', __( 'API Anahtarı / Token', 'smart-assistant' ), 'render_api_key_field', 'smart_assistant_general' );
+        $this->add_field( 'group_id', __( 'Group ID (MiniMax Token Plan)', 'smart-assistant' ), 'render_group_id_field', 'smart_assistant_general' );
+        $this->add_field( 'api_base_url', __( 'API Base URL', 'smart-assistant' ), 'render_api_base_url_field', 'smart_assistant_general' );
+        $this->add_field( 'model', __( 'Model', 'smart-assistant' ), 'render_model_field', 'smart_assistant_general' );
+        $this->add_field( 'system_prompt', __( 'Sistem Prompt\'u', 'smart-assistant' ), 'render_system_prompt_field', 'smart_assistant_general' );
+        $this->add_field( 'temperature', __( 'Temperature', 'smart-assistant' ), 'render_temperature_field', 'smart_assistant_general' );
+        $this->add_field( 'max_tokens', __( 'Max Tokens', 'smart-assistant' ), 'render_max_tokens_field', 'smart_assistant_general' );
 
         add_settings_section(
             'smart_assistant_content',
@@ -132,9 +132,9 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'post_types', __( 'İçerik Kaynakları (Post Type)', 'smart-assistant' ), 'render_post_types_field' );
-        $this->add_field( 'max_results', __( 'Maksimum Sonuç', 'smart-assistant' ), 'render_max_results_field' );
-        $this->add_field( 'max_content_chars', __( 'Yazı Başına Max Karakter', 'smart-assistant' ), 'render_max_content_chars_field' );
+        $this->add_field( 'post_types', __( 'İçerik Kaynakları (Post Type)', 'smart-assistant' ), 'render_post_types_field', 'smart_assistant_content' );
+        $this->add_field( 'max_results', __( 'Maksimum Sonuç', 'smart-assistant' ), 'render_max_results_field', 'smart_assistant_content' );
+        $this->add_field( 'max_content_chars', __( 'Yazı Başına Max Karakter', 'smart-assistant' ), 'render_max_content_chars_field', 'smart_assistant_content' );
 
         add_settings_section(
             'smart_assistant_advanced',
@@ -145,15 +145,15 @@ class Settings {
             'smart-assistant'
         );
 
-        $this->add_field( 'open_notebook_url', __( 'Open Notebook URL (Mod 2)', 'smart-assistant' ), 'render_open_notebook_url_field' );
-        $this->add_field( 'open_notebook_notebook_id', __( 'Open Notebook Notebook ID', 'smart-assistant' ), 'render_open_notebook_notebook_id_field' );
-        $this->add_field( 'on_strategy_model', __( 'ON Strateji Modeli', 'smart-assistant' ), 'render_on_strategy_model_field' );
-        $this->add_field( 'on_answer_model', __( 'ON Cevap Modeli', 'smart-assistant' ), 'render_on_answer_model_field' );
-        $this->add_field( 'on_final_answer_model', __( 'ON Final Cevap Modeli', 'smart-assistant' ), 'render_on_final_answer_model_field' );
-        $this->add_field( 'on_cf_client_id', __( 'Cloudflare Access Client ID', 'smart-assistant' ), 'render_on_cf_client_id_field' );
-        $this->add_field( 'on_cf_client_secret', __( 'Cloudflare Access Client Secret', 'smart-assistant' ), 'render_on_cf_client_secret_field' );
-        $this->add_field( 'rate_limit_per_min', __( 'Dakikada Max İstek', 'smart-assistant' ), 'render_rate_limit_field' );
-        $this->add_field( 'enable_abilities', __( 'Abilities API Aktif', 'smart-assistant' ), 'render_abilities_field' );
+        $this->add_field( 'open_notebook_url', __( 'Open Notebook URL (Mod 2)', 'smart-assistant' ), 'render_open_notebook_url_field', 'smart_assistant_advanced' );
+        $this->add_field( 'open_notebook_notebook_id', __( 'Open Notebook Notebook ID', 'smart-assistant' ), 'render_open_notebook_notebook_id_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_strategy_model', __( 'ON Strateji Modeli', 'smart-assistant' ), 'render_on_strategy_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_answer_model', __( 'ON Cevap Modeli', 'smart-assistant' ), 'render_on_answer_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_final_answer_model', __( 'ON Final Cevap Modeli', 'smart-assistant' ), 'render_on_final_answer_model_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_cf_client_id', __( 'Cloudflare Access Client ID', 'smart-assistant' ), 'render_on_cf_client_id_field', 'smart_assistant_advanced' );
+        $this->add_field( 'on_cf_client_secret', __( 'Cloudflare Access Client Secret', 'smart-assistant' ), 'render_on_cf_client_secret_field', 'smart_assistant_advanced' );
+        $this->add_field( 'rate_limit_per_min', __( 'Dakikada Max İstek', 'smart-assistant' ), 'render_rate_limit_field', 'smart_assistant_advanced' );
+        $this->add_field( 'enable_abilities', __( 'Abilities API Aktif', 'smart-assistant' ), 'render_abilities_field', 'smart_assistant_advanced' );
 
         // AI Kimliği bölümü.
         add_settings_section(
@@ -164,20 +164,20 @@ class Settings {
             },
             'smart-assistant'
         );
-        $this->add_field( 'ai_name', __( 'AI Adı', 'smart-assistant' ), 'render_ai_name_field' );
-        $this->add_field( 'ai_tone', __( 'Ton', 'smart-assistant' ), 'render_ai_tone_field' );
-        $this->add_field( 'ai_greeting', __( 'Selamlama Mesajı', 'smart-assistant' ), 'render_ai_greeting_field' );
-        $this->add_field( 'ai_examples', __( 'Few-shot Örnekler', 'smart-assistant' ), 'render_ai_examples_field' );
-        $this->add_field( 'show_signature', __( 'Cevap Sonuna İmza', 'smart-assistant' ), 'render_show_signature_field' );
+        $this->add_field( 'ai_name', __( 'AI Adı', 'smart-assistant' ), 'render_ai_name_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_tone', __( 'Ton', 'smart-assistant' ), 'render_ai_tone_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_greeting', __( 'Selamlama Mesajı', 'smart-assistant' ), 'render_ai_greeting_field', 'smart_assistant_identity' );
+        $this->add_field( 'ai_examples', __( 'Few-shot Örnekler', 'smart-assistant' ), 'render_ai_examples_field', 'smart_assistant_identity' );
+        $this->add_field( 'show_signature', __( 'Cevap Sonuna İmza', 'smart-assistant' ), 'render_show_signature_field', 'smart_assistant_identity' );
     }
 
-    private function add_field( $id, $title, $callback, $args = [] ) {
+    private function add_field( $id, $title, $callback, $section = 'smart_assistant_general', $args = [] ) {
         add_settings_field(
             'smart_assistant_' . $id,
             $title,
             [ $this, $callback ],
             'smart-assistant',
-            'smart_assistant_general',
+            $section,
             array_merge( [ 'key' => $id ], $args )
         );
     }
