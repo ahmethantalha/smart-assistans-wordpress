@@ -31,6 +31,40 @@ class RestController {
             },
         ] );
 
+        // Admin sohbet testi — gerçek sohbet akışını admin panelinden dener.
+        register_rest_route( self::NAMESPACE_V1, '/admin-chat', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_admin_chat' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+            'args'                => [
+                'message' => [
+                    'required' => true,
+                    'type'     => 'string',
+                ],
+                'history' => [
+                    'required' => false,
+                    'type'     => 'array',
+                    'default'  => [],
+                ],
+                'post_id' => [
+                    'required' => false,
+                    'type'     => 'integer',
+                    'default'  => 0,
+                ],
+            ],
+        ] );
+
+        // Open Notebook bağlantı testi — CF Access token'larıyla birlikte.
+        register_rest_route( self::NAMESPACE_V1, '/on-test', [
+            'methods'             => 'POST',
+            'callback'            => [ $this, 'handle_on_test' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+        ] );
+
         register_rest_route( self::NAMESPACE_V1, '/chat', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'handle_chat' ],
@@ -131,6 +165,139 @@ class RestController {
             'model'   => $result['model'],
             'usage'   => $result['usage'],
             'debug'   => $debug,
+        ] );
+    }
+
+    /**
+     * /admin-chat endpoint'i — admin panelinden Mod 1/Mod 2 gerçek sohbet akışını dener.
+     *
+     * Frontend public /chat ile aynı kod yolunu kullanır; tek fark: permission admin-only'dir,
+     * rate limit ve nonce kontrolü uygulanmaz (admin zaten giriş yapmıştır).
+     */
+    public function handle_admin_chat( \WP_REST_Request $request ) {
+        $opts    = smart_assistant_get_options();
+        $message = sanitize_text_field( $request->get_param( 'message' ) );
+        $history = $this->normalize_history( $request->get_param( 'history' ) );
+        $post_id = absint( $request->get_param( 'post_id' ) );
+
+        if ( '' === $message ) {
+            return $this->error_response( new \WP_Error( 'empty_message', __( 'Mesaj boş olamaz.', 'smart-assistant' ) ) );
+        }
+
+        $start = microtime( true );
+
+        // Mod 2: ON üzerinden.
+        if ( 'open_notebook' === $opts['mode'] ) {
+            $on_resp = \SmartAssistant\Plugin::instance()->open_notebook->ask( $message, $post_id );
+            if ( is_wp_error( $on_resp ) ) {
+                return new \WP_REST_Response(
+                    [
+                        'code'    => $on_resp->get_error_code(),
+                        'message' => $on_resp->get_error_message(),
+                        'data'    => $on_resp->get_error_data(),
+                    ],
+                    502
+                );
+            }
+            $elapsed = round( ( microtime( true ) - $start ) * 1000 );
+            return rest_ensure_response( [
+                'reply'      => $on_resp['content'],
+                'sources'    => $on_resp['sources'],
+                'model'      => 'open_notebook',
+                'elapsed_ms' => $elapsed,
+            ] );
+        }
+
+        // Mod 1: WP search + LLM.
+        $sources = \SmartAssistant\Plugin::instance()->search->search( $message, $post_id );
+
+        $messages   = $history;
+        $messages[] = [ 'role' => 'user', 'content' => $message ];
+
+        $ai_resp = \SmartAssistant\Plugin::instance()->ai_client->chat( $messages, [
+            'sources' => $sources,
+            'mode'    => 'simple',
+        ] );
+
+        if ( is_wp_error( $ai_resp ) ) {
+            return new \WP_REST_Response(
+                [
+                    'code'    => $ai_resp->get_error_code(),
+                    'message' => $ai_resp->get_error_message(),
+                ],
+                502
+            );
+        }
+
+        $elapsed = round( ( microtime( true ) - $start ) * 1000 );
+
+        return rest_ensure_response( [
+            'reply'      => $ai_resp['content'],
+            'sources'    => $sources,
+            'model'      => $ai_resp['model'],
+            'usage'      => $ai_resp['usage'],
+            'elapsed_ms' => $elapsed,
+        ] );
+    }
+
+    /**
+     * /on-test endpoint'i — Open Notebook'e bağlantıyı ve CF Access header'larını doğrular.
+     *
+     * Notebook listesini çekmeyi dener; HTTP kodu, latency, dönen notebook sayısı ve hata varsa
+     * detayını döner. Admin yetkisi zorunlu.
+     */
+    public function handle_on_test( \WP_REST_Request $request ) {
+        $opts = smart_assistant_get_options();
+
+        if ( empty( $opts['open_notebook_url'] ) ) {
+            return new \WP_REST_Response( [
+                'ok'    => false,
+                'error' => [
+                    'code'    => 'on_no_url',
+                    'message' => __( 'Open Notebook URL ayarlanmamış.', 'smart-assistant' ),
+                ],
+            ], 400 );
+        }
+
+        $start   = microtime( true );
+        $notebooks = \SmartAssistant\Plugin::instance()->open_notebook->list_notebooks();
+        $elapsed = round( ( microtime( true ) - $start ) * 1000 );
+
+        $has_cf = ! empty( $opts['on_cf_client_id'] ) && ! empty( $opts['on_cf_client_secret'] );
+
+        $debug = [
+            'on_url'                => rtrim( $opts['open_notebook_url'], '/' ),
+            'cf_access_configured'  => $has_cf,
+            'elapsed_ms'            => $elapsed,
+        ];
+
+        if ( is_wp_error( $notebooks ) ) {
+            return rest_ensure_response( [
+                'ok'    => false,
+                'error' => [
+                    'code'    => $notebooks->get_error_code(),
+                    'message' => $notebooks->get_error_message(),
+                ],
+                'debug' => $debug,
+            ] );
+        }
+
+        $count = is_array( $notebooks ) ? count( $notebooks ) : 0;
+        $debug['notebook_count'] = $count;
+
+        // İlk notebook'un yapısını göstermek, hata ayıklamada faydalı olur.
+        if ( $count > 0 ) {
+            $debug['sample'] = array_intersect_key(
+                (array) $notebooks[0],
+                array_flip( [ 'id', 'name', 'title', 'created' ] )
+            );
+        }
+
+        return rest_ensure_response( [
+            'ok'        => true,
+            'notebooks' => $notebooks,
+            'count'     => $count,
+            'debug'     => $debug,
         ] );
     }
 

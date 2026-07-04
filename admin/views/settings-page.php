@@ -72,6 +72,14 @@ $sections = [
                 <span class="sa-nav-icon" aria-hidden="true">🔌</span>
                 <?php esc_html_e( 'Test', 'smart-assistant' ); ?>
             </a>
+            <a href="#section-on-test"  class="sa-nav-link" data-target="section-on-test">
+                <span class="sa-nav-icon" aria-hidden="true">🛰️</span>
+                <?php esc_html_e( 'ON Bağlantısı', 'smart-assistant' ); ?>
+            </a>
+            <a href="#section-chat"     class="sa-nav-link" data-target="section-chat">
+                <span class="sa-nav-icon" aria-hidden="true">💬</span>
+                <?php esc_html_e( 'Sohbet Testi', 'smart-assistant' ); ?>
+            </a>
             <a href="#section-sync"     class="sa-nav-link" data-target="section-sync">
                 <span class="sa-nav-icon" aria-hidden="true">🔄</span>
                 <?php esc_html_e( 'Senkronizasyon', 'smart-assistant' ); ?>
@@ -282,6 +290,69 @@ $sections = [
                 </button>
                 <div id="smart-assistant-test-result" class="sa-test-result"></div>
                 <pre id="smart-assistant-test-debug" class="sa-test-debug" hidden></pre>
+            </div>
+        </section>
+
+        <section id="section-on-test" class="sa-card" data-section="on-test">
+            <div class="sa-card-head">
+                <div>
+                    <h2 class="sa-card-title"><?php esc_html_e( 'Open Notebook Bağlantısı', 'smart-assistant' ); ?></h2>
+                    <p class="sa-card-sub"><?php esc_html_e( 'Cloudflare Access token\'ları dahil ON API erişimini test eder; notebook listesini çeker.', 'smart-assistant' ); ?></p>
+                </div>
+            </div>
+            <div class="sa-card-body">
+                <?php if ( $has_on ) : ?>
+                    <div class="sa-test-row">
+                        <button type="button" id="smart-assistant-on-test-btn" class="sa-btn sa-btn-secondary">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                            <span><?php esc_html_e( 'ON Bağlantısını Test Et', 'smart-assistant' ); ?></span>
+                        </button>
+                        <span class="sa-test-status">
+                            <?php
+                            $has_cf = ! empty( $opts['on_cf_client_id'] ) && ! empty( $opts['on_cf_client_secret'] );
+                            if ( $has_cf ) {
+                                echo '<span class="sa-badge sa-badge-ok">🛡️ CF Access Service Token aktif</span>';
+                            } else {
+                                echo '<span class="sa-badge sa-badge-warn">⚠️ CF Access token yok (auth\'suz mod)</span>';
+                            }
+                            ?>
+                        </span>
+                    </div>
+                    <div id="smart-assistant-on-test-result" class="sa-test-result"></div>
+                    <pre id="smart-assistant-on-test-debug" class="sa-test-debug" hidden></pre>
+                <?php else : ?>
+                    <div class="sa-empty">
+                        <div class="sa-empty-icon">🛰️</div>
+                        <h3 class="sa-empty-title"><?php esc_html_e( 'Önce ON ayarlarını girin', 'smart-assistant' ); ?></h3>
+                        <p class="sa-empty-text"><?php esc_html_e( '"Gelişmiş" bölümünden Open Notebook URL ve Notebook ID alanlarını doldurduğunuzda bu test aktif olur.', 'smart-assistant' ); ?></p>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </section>
+
+        <section id="section-chat" class="sa-card" data-section="chat">
+            <div class="sa-card-head">
+                <div>
+                    <h2 class="sa-card-title"><?php esc_html_e( 'Sohbet Testi', 'smart-assistant' ); ?></h2>
+                    <p class="sa-card-sub"><?php esc_html_e( 'Frontend public widget ile aynı kod yolunu dener; ayarları kaydetmeden önce davranışı görün.', 'smart-assistant' ); ?></p>
+                </div>
+                <span class="sa-badge sa-badge-info"><?php
+                    echo 'open_notebook' === $mode
+                        ? esc_html__( 'Mod 2 — ON', 'smart-assistant' )
+                        : esc_html__( 'Mod 1 — WP + LLM', 'smart-assistant' );
+                ?></span>
+            </div>
+            <div class="sa-card-body">
+                <div id="sa-admin-chat" class="sa-chat">
+                    <div class="sa-chat-messages" aria-live="polite"></div>
+                    <div class="sa-chat-input-row">
+                        <textarea class="sa-chat-input" rows="2" placeholder="<?php esc_attr_e( 'Bir soru sor…', 'smart-assistant' ); ?>"></textarea>
+                        <div class="sa-chat-actions">
+                            <button type="button" class="sa-btn sa-btn-secondary sa-chat-send"><?php esc_html_e( 'Gönder', 'smart-assistant' ); ?></button>
+                            <button type="button" class="sa-btn sa-btn-ghost sa-chat-clear"><?php esc_html_e( 'Temizle', 'smart-assistant' ); ?></button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 

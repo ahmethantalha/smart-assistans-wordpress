@@ -39,18 +39,42 @@ class Admin {
         );
         // JS'e REST URL + nonce + i18n aktar.
         wp_localize_script( 'smart-assistant-admin', 'SmartAssistantAdmin', [
-            'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1/test' ) ),
+            'restUrl'  => esc_url_raw( rest_url( 'smart-assistant/v1' ) ),
             'nonce'    => wp_create_nonce( 'wp_rest' ),
             'i18n'     => [
-                'saved'        => __( '✓ Ayarlar kaydedildi', 'smart-assistant' ),
-                'testing'      => __( 'Test ediliyor...', 'smart-assistant' ),
-                'testSuccess'  => __( '✓ Bağlantı başarılı', 'smart-assistant' ),
+                'saved'          => __( '✓ Ayarlar kaydedildi', 'smart-assistant' ),
+                'testing'        => __( 'Test ediliyor...', 'smart-assistant' ),
+                'testSuccess'    => __( '✓ Bağlantı başarılı', 'smart-assistant' ),
+                'chatThinking'   => __( 'Düşünüyor…', 'smart-assistant' ),
+                'chatPlaceholder'=> __( 'Bir soru sor…', 'smart-assistant' ),
+                'chatSend'       => __( 'Gönder', 'smart-assistant' ),
+                'chatClear'      => __( 'Sohbeti Temizle', 'smart-assistant' ),
+                'chatEmpty'      => __( 'Henüz mesaj yok. Bir soru sorarak başlayın.', 'smart-assistant' ),
+                'onTesting'      => __( 'ON bağlantısı test ediliyor…', 'smart-assistant' ),
+                'onSuccess'      => __( '✓ Open Notebook\'e erişildi', 'smart-assistant' ),
+                'onFail'         => __( '✗ Bağlantı başarısız', 'smart-assistant' ),
             ],
         ] );
         // Provider preset'lerini JS'e aktar.
         if ( function_exists( 'smart_assistant_get_provider_presets' ) ) {
             wp_localize_script( 'smart-assistant-admin', 'SmartAssistantPresets', smart_assistant_get_provider_presets() );
         }
+
+        // Sohbet testi + ON bağlantı testi scriptleri (ayrı dosyalar).
+        wp_enqueue_script(
+            'smart-assistant-on-test',
+            SMART_ASSISTANT_URL . 'admin/js/on-test.js',
+            [ 'jquery' ],
+            SMART_ASSISTANT_VERSION,
+            true
+        );
+        wp_enqueue_script(
+            'smart-assistant-admin-chat',
+            SMART_ASSISTANT_URL . 'admin/js/admin-chat.js',
+            [ 'jquery' ],
+            SMART_ASSISTANT_VERSION,
+            true
+        );
     }
 
     public function add_menu() {
