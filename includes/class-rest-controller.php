@@ -65,6 +65,15 @@ class RestController {
             },
         ] );
 
+        // DEBUG: DB'deki smart_assistant_options snapshot'ını döndür.
+        register_rest_route( self::NAMESPACE_V1, '/options-snapshot', [
+            'methods'             => 'GET',
+            'callback'            => [ $this, 'handle_options_snapshot' ],
+            'permission_callback' => function () {
+                return current_user_can( 'manage_options' );
+            },
+        ] );
+
         register_rest_route( self::NAMESPACE_V1, '/chat', [
             'methods'             => 'POST',
             'callback'            => [ $this, 'handle_chat' ],
@@ -349,6 +358,57 @@ class RestController {
             'count'     => $count,
             'debug'     => $debug,
         ] );
+    }
+
+    /**
+     * /options-snapshot endpoint'i — DB'deki smart_assistant_options'un ham snapshot'ını döner.
+     *
+     * Hassas alanlar (api_key, on_cf_client_*, group_id) maskelenir. Sadece admin yetkisi gerekir.
+     * Save sonrası UI ile DB arasında fark olup olmadığını görmek için debug amaçlı.
+     */
+    public function handle_options_snapshot( \WP_REST_Request $request ) {
+        $raw  = get_option( 'smart_assistant_options', [] );
+        $opts = smart_assistant_get_options();
+
+        // Hassas alanları maskele.
+        $mask = function ( $v ) {
+            if ( ! is_string( $v ) || '' === $v ) return $v;
+            $len = strlen( $v );
+            if ( $len <= 8 ) return str_repeat( '•', $len );
+            return substr( $v, 0, 4 ) . str_repeat( '•', 8 ) . substr( $v, -4 ) . ' (len=' . $len . ')';
+        };
+
+        $keys_to_mask = [ 'api_key', 'group_id', 'on_cf_client_id', 'on_cf_client_secret' ];
+
+        $snapshot = [
+            'is_array'     => is_array( $raw ),
+            'raw_empty'    => empty( $raw ),
+            'raw_keys'     => is_array( $raw ) ? array_keys( $raw ) : null,
+            'cooked_keys'  => is_array( $opts ) ? array_keys( $opts ) : null,
+            'raw_version'  => is_array( $raw ) ? ( $raw['mode'] ?? 'N/A' ) : null,
+            'cooked_mode'  => $opts['mode'] ?? 'N/A',
+            'cooked_tone'  => $opts['ai_tone'] ?? 'N/A',
+            'tools_count'  => isset( $opts['tools'] ) && is_array( $opts['tools'] ) ? count( $opts['tools'] ) : 0,
+            'tool_keys'    => isset( $opts['tools'] ) && is_array( $opts['tools'] )
+                ? array_values( array_filter( array_map( fn( $t ) => is_array( $t ) ? ( $t['key'] ?? '' ) : '', $opts['tools'] ) ) )
+                : [],
+            'cf'           => [
+                'url_set'        => ! empty( $opts['open_notebook_url'] ),
+                'notebook_id_set'=> ! empty( $opts['open_notebook_notebook_id'] ),
+                'client_id_len'  => strlen( $opts['on_cf_client_id']     ?? '' ),
+                'secret_len'     => strlen( $opts['on_cf_client_secret'] ?? '' ),
+            ],
+            'masked'       => array_intersect_key( $opts, array_flip( $keys_to_mask ) ),
+        ];
+
+        // Maskelenmiş hali de hazırla.
+        foreach ( $keys_to_mask as $k ) {
+            if ( isset( $snapshot['masked'][ $k ] ) ) {
+                $snapshot['masked'][ $k ] = $mask( $snapshot['masked'][ $k ] );
+            }
+        }
+
+        return rest_ensure_response( $snapshot );
     }
 
     /**
