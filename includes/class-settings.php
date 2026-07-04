@@ -32,6 +32,18 @@ class Settings {
             return;
         }
         if ( empty( $_POST['smart_assistant_options'] ) || ! is_array( $_POST['smart_assistant_options'] ) ) {
+            // WP_DEBUG açıkken POST boş geldiğini logla — sebep ne?
+            if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+                update_option( 'smart_assistant_debug_save_in', wp_json_encode( [
+                    'called'           => 'maybe_manual_save',
+                    'time'             => date( 'c' ),
+                    'option_page_set'  => ! empty( $_POST['option_page'] ),
+                    'option_page'      => $_POST['option_page'] ?? null,
+                    'opts_set'         => ! empty( $_POST['smart_assistant_options'] ),
+                    'opts_type'        => isset( $_POST['smart_assistant_options'] ) ? gettype( $_POST['smart_assistant_options'] ) : null,
+                    'reason'           => 'POST şartı sağlanmadı',
+                ] ), false );
+            }
             return;
         }
         // check_admin_referer wp_die ile ölürse, no-cache header gönderir — biz sadece
@@ -173,44 +185,38 @@ class Settings {
     public function sanitize( $input ) {
         $out = smart_assistant_get_options();
 
-        // === Debug: gelen input'un anahtarlarını logla ===
-        // Üretimde kapatmak için WP_DEBUG kontrolü yeterli; debug.log aktifken
-        // burada hangi field'ların geldiğini net görürüz (tools_submitted, mode, ai_tone vs.).
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG && is_array( $input ) ) {
-            $keys   = array_keys( $input );
-            $tools  = isset( $input['tools'] ) && is_array( $input['tools'] ) ? count( $input['tools'] ) : 0;
-            smart_assistant_log(
-                'sanitize başladı. Gelen field sayısı: ' . count( $keys ) .
-                ' | mode=' . ( $input['mode'] ?? 'N/A' ) .
-                ' | ai_tone=' . ( $input['ai_tone'] ?? 'N/A' ) .
-                ' | tools_submitted=' . ( ! empty( $input['tools_submitted'] ) ? '1 (' . $tools . ' rows)' : '0' ) .
-                ' | cf_id_len=' . strlen( $input['on_cf_client_id'] ?? '' ) .
-                ' | cf_secret_len=' . strlen( $input['on_cf_client_secret'] ?? '' ) .
-                ' | first 12 keys: ' . implode( ',', array_slice( $keys, 0, 12 ) ),
-                'debug'
-            );
-        }
+        // === KRİTİK DEBUG: sanitize() çağrıldı mı? ===
+        // Bu kısım her sanitize() çağrısında çalışır. WP_DEBUG açıkken WP_DEBUG_LOG'a
+        // ve smart_assistant_debug_save_in option'ına yazar. Eğer bu option hep null
+        // ise sanitize() hiç çağrılmıyor demektir (form POST'u PHP'ye ulaşmıyor).
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+            $trace = [
+                'called'            => true,
+                'pid'               => getmypid(),
+                'time'              => date( 'c' ),
+                'is_array_input'    => is_array( $input ),
+                'input_key_count'   => is_array( $input ) ? count( $input ) : 0,
+                'input_first_3'     => is_array( $input ) ? array_slice( array_keys( $input ), 0, 3 ) : null,
+                'mode_in'           => is_array( $input ) ? ( $input['mode']        ?? null ) : null,
+                'ai_tone_in'        => is_array( $input ) ? ( $input['ai_tone']     ?? null ) : null,
+                'tools_in_count'    => ( is_array( $input ) && is_array( $input['tools'] ?? null ) ) ? count( $input['tools'] ) : 0,
+                'tools_submitted'   => is_array( $input ) ? ! empty( $input['tools_submitted'] ) : false,
+                'cf_id_in_len'      => is_array( $input ) ? strlen( $input['on_cf_client_id']     ?? '' ) : 0,
+                'cf_secret_in_len'  => is_array( $input ) ? strlen( $input['on_cf_client_secret'] ?? '' ) : 0,
+                'current_out_mode'  => $out['mode']    ?? null,
+                'current_out_tone'  => $out['ai_tone'] ?? null,
+                'current_out_keys'  => is_array( $out ) ? count( $out ) : 0,
+                'version'           => defined( 'SMART_ASSISTANT_VERSION' ) ? SMART_ASSISTANT_VERSION : 'N/A',
+            ];
+            update_option( 'smart_assistant_debug_save_in', wp_json_encode( $trace ), false );
 
-        // === KRİTİK DEBUG: bir option kaydedildi mi, kaydedilmedi mi? ===
-        // Aşağıdaki 1 ifadeleri geçici: mevcut DB snapshot + sanitize giriş-çıkış
-        // değerlerini WP option'a yazarız. Sonra WP Admin > Ayarlar > Test
-        // kısmından görebilirsin veya https://site.com/wp-admin/options.php
-        // üzerinden smart_assistant_debug_save alanına bakabilirsin.
-        if ( is_array( $input ) && ! empty( $input['_save_debug_marker'] ) ) {
-            // Marker inputtan kaldırılır; sadece debug için geçici.
-            unset( $input['_save_debug_marker'] );
-        }
-        // Geçici debug snapshot: sanitize'ın EN SONUNA taşınacak; burada sadece girişi logla.
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
-            update_option( 'smart_assistant_debug_save_in', wp_json_encode( [
-                'keys'           => is_array( $input ) ? array_keys( $input ) : null,
-                'mode_in'        => $input['mode']       ?? null,
-                'ai_tone_in'     => $input['ai_tone']    ?? null,
-                'tools_in_count' => is_array( $input['tools'] ?? null ) ? count( $input['tools'] ) : 0,
-                'cf_id_in_len'   => strlen( $input['on_cf_client_id']     ?? '' ),
-                'cf_secret_in_len'=> strlen( $input['on_cf_client_secret']?? '' ),
-                'time'           => date( 'c' ),
-            ] ), false );
+            if ( defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+                smart_assistant_log( 'sanitize çağrıldı: input_keys=' . $trace['input_key_count'] .
+                    ' mode_in=' . var_export( $trace['mode_in'], true ) .
+                    ' tone_in=' . var_export( $trace['ai_tone_in'], true ) .
+                    ' tools=' . $trace['tools_in_count'] .
+                    ' version=' . $trace['version'], 'debug' );
+            }
         }
 
         $out['mode'] = in_array( $input['mode'] ?? 'simple', [ 'simple', 'open_notebook' ], true ) ? $input['mode'] : 'simple';
@@ -297,18 +303,16 @@ class Settings {
         }
 
         // === KRİTİK DEBUG: sanitize çıktı snapshot'ı ===
-        // Bu option'a bakarak "kaydet dediğim anda gerçekten ne döndü" sorusunu
-        // cevaplayabiliriz. WP Admin > options.php URL'i üzerinden
-        // 'smart_assistant_debug_save_out' alanına bak.
-        if ( defined( 'WP_DEBUG' ) && WP_DEBUG && defined( 'WP_DEBUG_LOG' ) && WP_DEBUG_LOG ) {
+        if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
             update_option( 'smart_assistant_debug_save_out', wp_json_encode( [
-                'keys'           => array_keys( (array) $out ),
-                'mode_out'       => $out['mode']       ?? null,
-                'ai_tone_out'    => $out['ai_tone']    ?? null,
+                'time'           => date( 'c' ),
+                'mode_out'       => $out['mode']    ?? null,
+                'ai_tone_out'    => $out['ai_tone'] ?? null,
                 'tools_out_count'=> isset( $out['tools'] ) && is_array( $out['tools'] ) ? count( $out['tools'] ) : 0,
                 'cf_id_out_len'  => strlen( $out['on_cf_client_id']     ?? '' ),
                 'cf_secret_out_len'=> strlen( $out['on_cf_client_secret']?? '' ),
-                'time'           => date( 'c' ),
+                'output_keys'    => is_array( $out ) ? count( $out ) : 0,
+                'version'        => defined( 'SMART_ASSISTANT_VERSION' ) ? SMART_ASSISTANT_VERSION : 'N/A',
             ] ), false );
         }
 
