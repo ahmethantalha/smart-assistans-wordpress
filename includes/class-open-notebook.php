@@ -45,10 +45,12 @@ class OpenNotebook {
         $endpoint = $base . '/api/search/ask/simple';
 
         $body = [
-            'question'         => $query,
-            'strategy_model'   => $opts['on_strategy_model']   ?: self::DEFAULT_STRATEGY_MODEL,
-            'answer_model'     => $opts['on_answer_model']     ?: self::DEFAULT_ANSWER_MODEL,
-            'final_answer_model'=> $opts['on_final_answer_model'] ?: self::DEFAULT_FINAL_MODEL,
+            'question'           => $query,
+            'notebook_id'        => $opts['open_notebook_notebook_id'],
+            'notebook'           => $opts['open_notebook_notebook_id'],
+            'strategy_model'     => $opts['on_strategy_model']   ?: self::DEFAULT_STRATEGY_MODEL,
+            'answer_model'       => $opts['on_answer_model']     ?: self::DEFAULT_ANSWER_MODEL,
+            'final_answer_model' => $opts['on_final_answer_model'] ?: self::DEFAULT_FINAL_MODEL,
         ];
 
         $response = wp_remote_post( $endpoint, [
@@ -66,7 +68,17 @@ class OpenNotebook {
         }
 
         $code = wp_remote_retrieve_response_code( $response );
-        $data = json_decode( wp_remote_retrieve_body( $response ), true );
+        $raw_body = wp_remote_retrieve_body( $response );
+        $data = json_decode( $raw_body, true );
+
+        // Debug: ON'den ne geldi?
+        smart_assistant_log( sprintf(
+            'ON ask response: HTTP %d, body_len=%d, json_keys=%s, data_type=%s',
+            $code,
+            strlen( $raw_body ),
+            is_array( $data ) ? implode( ',', array_keys( $data ) ) : 'N/A',
+            gettype( $data )
+        ), 'debug' );
 
         if ( $code < 200 || $code >= 300 ) {
             $err = $this->extract_error( $data ) ?: sprintf( __( 'HTTP %d', 'smart-assistant' ), $code );
@@ -80,6 +92,13 @@ class OpenNotebook {
                 ?? $data['response']
                 ?? $data['content']
                 ?? '';
+
+        // Debug: hangi key'den cevap alındı?
+        if ( '' === $content ) {
+            smart_assistant_log( 'ON ask: content BOŞ döndü! Tüm response body (ilk 500 char): ' . substr( $raw_body, 0, 500 ), 'warning' );
+        } else {
+            smart_assistant_log( 'ON ask: content OK, len=' . strlen( $content ), 'debug' );
+        }
 
         // Mod 2 (ON) yolu chat()'ten geçmediği için burada da temizle:
         // thinking etiketleri + bozuk HTML link kalıntıları.

@@ -1,4 +1,4 @@
-name: Release
+name: Auto Release
 
 on:
   push:
@@ -6,57 +6,142 @@ on:
 
 jobs:
   release:
-    name: Build & Release
+    name: Bump Version & Release
     runs-on: ubuntu-latest
+    # CI job'ları varsa onların bitmesini bekleme — direkt release
     permissions:
       contents: write
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Read version from plugin header
-        id: ver
+      - name: Read current version
+        id: current
         run: |
           VERSION=$(grep -oP '(?<=\* Version:\s{0,20})\d+\.\d+\.\d+' smart-assistant.php | head -1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
-          echo "zip=smart-assistant-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "📌 Current version: $VERSION"
 
-      - name: Check if release already exists
+      - name: Check if this version already has a release
         id: check
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          STATUS=$(gh release view "${{ steps.ver.outputs.tag }}" 2>&1 && echo "exists" || echo "missing")
-          echo "exists=$([[ $STATUS == *exists* ]] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          TAG="v${{ steps.current.outputs.version }}"
+          if gh release view "$TAG" &>/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "🔄 Release $TAG exists, will bump version"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Release $TAG does not exist, will create it"
+          fi
+
+      - name: Bump version (auto-patch)
+        if: steps.check.outputs.exists == 'true'
+        id: bump
+        run: |
+          CURRENT="${{ steps.current.outputs.version }}"
+          
+          # Commit mesajından bump tipi tespit et
+          LAST_MSG=$(git log -1 --pretty=%B)
+          if echo "$LAST_MSG" | grep -qi '\[major\]'; then
+            BUMP="major"
+          elif echo "$LAST_MSG" | grep -qi '\[minor\]'; then
+            BUMP="minor"
+          elif echo "$LAST_MSG" | grep -qi '\[skip-release\]'; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "⏭️ Release skipped"
+            exit 0
+          else
+            BUMP="patch"
+          fi
+          
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          case "$BUMP" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH+1)) ;;
+          esac
+          NEW="${MAJOR}.${MINOR}.${PATCH}"
+          
+          echo "new_version=$NEW" >> "$GITHUB_OUTPUT"
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "🚀 Bumping $CURRENT → $NEW ($BUMP)"
+          
+          # Plugin dosyasındaki versiyonu güncelle
+          sed -i "s/\* Version:.*$/\* Version:           ${NEW}/" smart-assistant.php
+          sed -i "s/define( 'SMART_ASSISTANT_VERSION', '.*'/define( 'SMART_ASSISTANT_VERSION', '${NEW}'/" smart-assistant.php
+          
+          # readme.txt varsa onu da güncelle
+          if [ -f readme.txt ]; then
+            sed -i "s/^Stable tag:.*$/Stable tag: ${NEW}/" readme.txt
+          fi
+
+      - name: Determine final version
+        id: ver
+        run: |
+          if [ "${{ steps.check.outputs.exists }}" == "true" ]; then
+            VERSION="${{ steps.bump.outputs.new_version }}"
+            SKIP="${{ steps.bump.outputs.skip }}"
+          else
+            VERSION="${{ steps.current.outputs.version }}"
+            SKIP="false"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          echo "zip=smart-assistant-$VERSION.zip" >> "$GITHUB_OUTPUT"
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
+          echo "📦 Final version: $VERSION"
+
+      - name: Commit version bump
+        if: steps.check.outputs.exists == 'true' && steps.ver.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: bump version to ${{ steps.ver.outputs.version }} [skip-release]"
+          git push
 
       - name: Build plugin zip
-        if: steps.check.outputs.exists == 'false'
+        if: steps.ver.outputs.skip != 'true'
         run: |
           mkdir -p build/smart-assistant
-          cp -r . build/smart-assistant/
-          # Geliştirme dosyalarını temizle
-          rm -rf build/smart-assistant/.git
-          rm -rf build/smart-assistant/.github
-          rm -rf build/smart-assistant/.claude
-          rm -rf build/smart-assistant/tests
-          rm -rf build/smart-assistant/vendor
-          rm -rf build/smart-assistant/node_modules
-          rm -f  build/smart-assistant/composer.json
-          rm -f  build/smart-assistant/composer.lock
-          rm -f  build/smart-assistant/phpunit.xml
-          rm -f  build/smart-assistant/phpcs.xml
-          rm -f  build/smart-assistant/phpstan.neon
+          
+          # Sadece gerekli dosyaları kopyala (whitelist yaklaşımı)
+          cp smart-assistant.php build/smart-assistant/
+          cp uninstall.php build/smart-assistant/
+          cp LICENSE build/smart-assistant/
+          cp README.md build/smart-assistant/
+          [ -f readme.txt ] && cp readme.txt build/smart-assistant/
+          
+          cp -r includes/ build/smart-assistant/includes/
+          cp -r admin/ build/smart-assistant/admin/
+          cp -r public/ build/smart-assistant/public/
+          cp -r languages/ build/smart-assistant/languages/
+          [ -d blocks ] && cp -r blocks/ build/smart-assistant/blocks/
+          
+          # Dev dosyalarını temizle (includes/libs içindeki vendor hariç)
+          find build/smart-assistant -name ".DS_Store" -delete
+          find build/smart-assistant -name "*.log" -delete
+          
           cd build && zip -r "../${{ steps.ver.outputs.zip }}" smart-assistant/ -x "*.DS_Store"
-          echo "Zip size: $(du -h ../${{ steps.ver.outputs.zip }} | cut -f1)"
+          echo "📦 Zip created: $(du -h ../${{ steps.ver.outputs.zip }} | cut -f1)"
 
       - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false'
+        if: steps.ver.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Önceki release'den bu yana olan commit'leri release note olarak kullan
           gh release create "${{ steps.ver.outputs.tag }}" \
             "${{ steps.ver.outputs.zip }}" \
-            --title "${{ steps.ver.outputs.tag }}" \
-            --generate-notes
+            --title "🚀 ${{ steps.ver.outputs.tag }}" \
+            --generate-notes \
+            --latest
+
+          echo "✅ Release ${{ steps.ver.outputs.tag }} created!"
+          echo "📥 WordPress sites will auto-update via Plugin Update Checker"
